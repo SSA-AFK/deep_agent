@@ -16,3 +16,7 @@ def test_task_requires_confirmation_before_running():
 
     cancelled = client.post("/api/tasks/test-lifecycle/cancel")
     assert cancelled.json()["status"] == "cancelled"
+
+    feedback = client.post("/api/tasks/test-lifecycle/feedback", json={"helpful": True, "reason": "clear sources"})
+    assert feedback.status_code == 200
+    assert feedback.json()["status"] == "recorded"

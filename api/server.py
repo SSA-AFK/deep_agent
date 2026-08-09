@@ -8,6 +8,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List
 import shutil
+import json
+from datetime import datetime, timezone
 
 # Add project root to sys.path
 current_dir = Path(__file__).resolve().parent
@@ -48,6 +50,11 @@ app.add_middleware(
 class TaskRequest(BaseModel):
     query: str
     thread_id: str = None
+
+
+class FeedbackRequest(BaseModel):
+    helpful: bool
+    reason: str | None = None
 
 @app.on_event("startup")
 async def startup_event():
@@ -104,6 +111,24 @@ async def cancel_task(thread_id: str):
         raise HTTPException(status_code=404, detail="Task not found.")
     except ValueError as error:
         raise HTTPException(status_code=409, detail=str(error)) from error
+
+
+@app.post("/api/tasks/{thread_id}/feedback")
+async def submit_feedback(thread_id: str, feedback: FeedbackRequest):
+    try:
+        await task_manager.snapshot(thread_id)
+    except KeyError:
+        raise HTTPException(status_code=404, detail="Task not found.")
+    record = {
+        "thread_id": thread_id,
+        "helpful": feedback.helpful,
+        "reason": feedback.reason,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
+    feedback_path = output_dir / "feedback.jsonl"
+    with feedback_path.open("a", encoding="utf-8") as file:
+        file.write(json.dumps(record, ensure_ascii=False) + "\n")
+    return {"status": "recorded"}
 
 
 @app.post("/api/upload")
