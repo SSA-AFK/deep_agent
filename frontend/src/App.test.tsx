@@ -9,5 +9,6 @@ test("renders product name and submits a research question", () => {
   fireEvent.click(screen.getByLabelText("提交研究"));
   expect(screen.getByText("测试研究", { selector: "article p" })).toBeInTheDocument();
   fireEvent.click(screen.getByText("确认并开始"));
-  expect(screen.getByText("研究已启动")).toBeInTheDocument();
+  expect(screen.getByText("研究正在进行")).toBeInTheDocument();
+  expect(screen.getAllByText("演示来源")).toHaveLength(2);
 });
