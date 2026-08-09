@@ -19,6 +19,7 @@ from agent.main_agent import run_deep_agent
 from api.monitor import manager
 from api.health import get_service_registry
 from api.settings import get_settings
+from api.task_manager import TaskState, task_manager
 
 app = FastAPI(title="DeepAgents API")
 
@@ -64,12 +65,45 @@ async def run_task(request: TaskRequest):
     # 1. [ID 初始化]
     thread_id = request.thread_id or str(uuid.uuid4())
 
-    # 2. [后台执行] 异步运行 Agent，不阻塞主线程
-    # 注意：这里简单的使用 asyncio.create_task 触发，由 main_agent 内部负责实时推送
-    asyncio.create_task(run_deep_agent(request.query, thread_id))
+    try:
+        await task_manager.create(thread_id, request.query)
+        await task_manager.transition(thread_id, TaskState.WAITING_CONFIRMATION, {"plan": ["确认研究目标", "检索并汇总来源"]})
+    except ValueError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
 
     # 3. [立即响应]
-    return {"status": "started", "thread_id": thread_id}
+    return {"status": "waiting_confirmation", "thread_id": thread_id}
+
+
+@app.get("/api/tasks/{thread_id}")
+async def get_task(thread_id: str):
+    try:
+        return await task_manager.snapshot(thread_id)
+    except KeyError:
+        raise HTTPException(status_code=404, detail="Task not found.")
+
+
+@app.post("/api/tasks/{thread_id}/confirm")
+async def confirm_task(thread_id: str):
+    try:
+        task = await task_manager.transition(thread_id, TaskState.RUNNING)
+    except KeyError:
+        raise HTTPException(status_code=404, detail="Task not found.")
+    except ValueError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+    task.background_task = asyncio.create_task(run_deep_agent(task.query, thread_id))
+    return {"status": task.state, "thread_id": thread_id}
+
+
+@app.post("/api/tasks/{thread_id}/cancel")
+async def cancel_task(thread_id: str):
+    try:
+        task = await task_manager.cancel(thread_id)
+        return {"status": task.state, "thread_id": thread_id}
+    except KeyError:
+        raise HTTPException(status_code=404, detail="Task not found.")
+    except ValueError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
 
 
 @app.post("/api/upload")

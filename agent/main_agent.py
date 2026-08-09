@@ -20,6 +20,7 @@ import shutil
 from pathlib import Path
 
 from api.context import set_session_context, reset_session_context, set_thread_context
+from api.task_manager import TaskState, task_manager
 
 from langchain_core.messages import AIMessage
 
@@ -157,9 +158,18 @@ async def run_deep_agent(task_query,session_id):
                             print(f"主智能体执行结果，最终结果：{last_msg.content[:100]}")
                             monitor.report_task_result(last_msg.content)
 
+        try:
+            await task_manager.transition(session_id, TaskState.SUCCEEDED)
+        except (KeyError, ValueError):
+            pass
+
     except Exception as e :
         # 报错推送错误信息给前端
         monitor._emit("error",f"执行主智能发生异常信息：{str(e)}")
+        try:
+            await task_manager.transition(session_id, TaskState.FAILED)
+        except (KeyError, ValueError):
+            pass
     finally:
         # 释放存储的地址和session_id
         reset_session_context(session_dir_token, session_id_token)
