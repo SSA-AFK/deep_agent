@@ -12,6 +12,7 @@ frontend/dist/
 frontend/*.tsbuildinfo
 output/
 updated/
+evals/runs/
 
 # IDE settings
 .idea/
