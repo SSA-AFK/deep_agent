@@ -4,6 +4,12 @@
 
 真实 V1/V2 对比尚未形成可发布指标：当前模型鉴权状态未通过，因此不声明准确率提升、任务完成率提升或时延改善。待模型恢复后，两版必须在相同模型、超时和数据快照下各运行 30 条，再完成隐藏版本的人工评分。
 
+执行器已具备真实运行入口；不带 `--live` 时只写入 `completed=false` 的演练记录，不能进入效果聚合。模型凭据恢复后，分别对五个样本文件运行以下命令并替换版本参数：
+
+```powershell
+.\.venv\Scripts\python.exe -m evals.runner --prompt-version v1 --case-file evals/cases/network.jsonl --output evals/runs/v1.jsonl --live
+```
+
 ## 当前可验证结论
 
 - 样本总数：30。
