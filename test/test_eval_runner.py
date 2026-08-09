@@ -50,7 +50,8 @@ def test_versioned_prompt_snapshots_match_product_variants():
     root = Path(__file__).parents[1]
     v1 = yaml.safe_load((root / "evals/prompts/v1.yml").read_text(encoding="utf-8"))
     v2 = yaml.safe_load((root / "evals/prompts/v2.yml").read_text(encoding="utf-8"))
+    v3 = yaml.safe_load((root / "evals/prompts/v3.yml").read_text(encoding="utf-8"))
     current = yaml.safe_load((root / "prompt/prompts.yml").read_text(encoding="utf-8"))
-    assert v2 == current
+    assert v2 == current == v3
     assert "空调公司" in v1["main_agent"]["system_prompt"]
     assert "AI Agent 平台选型" in v2["main_agent"]["system_prompt"]

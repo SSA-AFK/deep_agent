@@ -9,6 +9,7 @@ from typing import Any
 
 import httpx
 from langchain_core.tools import tool
+from langchain_core.runnables import RunnableConfig
 
 from api.errors import PublicError
 from api.monitor import monitor
@@ -110,7 +111,7 @@ def _duration_ms(started: float) -> int:
 
 
 @tool
-def internet_search(query: str, max_results: int = 10) -> str:
+def internet_search(query: str, max_results: int = 10, config: RunnableConfig | None = None) -> str:
     """Search public information through Zhihu global search."""
     monitor.report_tool("知乎全网搜索", {"query": query, "max_results": max_results})
     settings = get_settings()
@@ -118,4 +119,7 @@ def internet_search(query: str, max_results: int = 10) -> str:
         settings.zhihu_access_secret,
         timeout_seconds=settings.request_timeout_seconds,
     ).search(query, count=max_results)
+    if result.status is ToolStatus.SUCCESS:
+        thread_id = (config or {}).get("configurable", {}).get("thread_id")
+        monitor.record_source_urls([item.url for item in result.items if item.url], thread_id=thread_id)
     return result.model_dump_json()

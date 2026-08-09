@@ -3,6 +3,7 @@ import pytest
 
 from tools.contracts import DataMode, ToolStatus
 from tools.zhihu_search_tool import ZHIHU_SEARCH_URL, ZhihuSearchClient
+from tools.zhihu_search_tool import internet_search
 
 
 class StubResponse:
@@ -56,6 +57,20 @@ def test_search_accepts_current_data_items_envelope(monkeypatch):
     assert result.status is ToolStatus.SUCCESS
     assert result.mode is DataMode.LIVE
     assert [item.title for item in result.items] == ["Current response"]
+
+
+def test_live_search_records_public_source_urls(monkeypatch):
+    def fake_get(self, *args, **kwargs):
+        return StubResponse(payload={"Code": 0, "Data": [{"Title": "Source", "Url": "https://example.invalid/source"}]})
+
+    monkeypatch.setattr(httpx.Client, "get", fake_get)
+    monkeypatch.setattr("tools.zhihu_search_tool.get_settings", lambda: type("Settings", (), {"zhihu_access_secret": "secret", "request_timeout_seconds": 3})())
+    recorded = []
+    monkeypatch.setattr("tools.zhihu_search_tool.monitor.record_source_urls", lambda urls, thread_id=None: recorded.extend(urls))
+
+    internet_search.invoke({"query": "agent", "max_results": 1}, config={"configurable": {"thread_id": "test-citation"}})
+
+    assert recorded == ["https://example.invalid/source"]
 
 
 @pytest.mark.parametrize("response", [

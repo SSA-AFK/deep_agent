@@ -10,6 +10,7 @@ from collections.abc import Awaitable, Callable
 from pathlib import Path
 
 from evals.schema import EvalCase, EvalRun
+from utils.citations import append_source_links
 
 LiveExecutor = Callable[[EvalCase, str, float], Awaitable[EvalRun]]
 EVALUATION_HARNESS_RULES = """
@@ -128,7 +129,10 @@ async def execute_live_case(case: EvalCase, prompt_version: str, timeout_seconds
     )
     duration_ms = int((time.perf_counter() - started) * 1000)
     messages = result.get("messages", [])
-    answer = str(messages[-1].content) if messages else ""
+    answer = append_source_links(
+        str(messages[-1].content) if messages else "",
+        [message.content for message in messages if getattr(message, "content", None)],
+    )
     traces = []
     for message in messages:
         for call in getattr(message, "tool_calls", []) or []:
@@ -140,7 +144,7 @@ async def execute_live_case(case: EvalCase, prompt_version: str, timeout_seconds
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--prompt-version", choices=["v1", "v2"], required=True)
+    parser.add_argument("--prompt-version", choices=["v1", "v2", "v3"], required=True)
     parser.add_argument("--case-file", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--live", action="store_true")

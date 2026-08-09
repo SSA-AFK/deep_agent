@@ -5,7 +5,7 @@ from typing import Literal
 from pydantic import BaseModel, Field, field_validator
 
 
-Category = Literal["network", "knowledge", "database", "multi_agent", "ambiguous_error"]
+Category = Literal["network", "database", "multi_agent", "ambiguous_error"]
 _UNSAFE_MARKERS = ("sk-", "api_key=", "password=", "c:\\users\\", "/home/", "e:\\")
 
 
@@ -39,7 +39,7 @@ class AgentTrace(BaseModel):
 
 class EvalRun(BaseModel):
     case_id: str
-    prompt_version: Literal["v1", "v2"]
+    prompt_version: Literal["v1", "v2", "v3"]
     completed: bool
     traces: list[AgentTrace] = Field(default_factory=list)
     answer: str = ""

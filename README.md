@@ -1,6 +1,6 @@
 # Deep Search Pro
 
-面向个人复杂任务的多 Agent 深度研究工作台，也是一个面向 Coze AI 产品实习岗位的可演示项目。用户提交问题与资料后，系统生成计划，协调公开研究、产品数据与知识库角色，展示执行状态和数据模式，最后生成可反馈、可导出的研究结果。
+面向个人复杂任务的多 Agent 深度研究工作台，也是一个面向 Coze AI 产品实习岗位的可演示项目。用户提交问题和资料后，系统生成计划，协调公开研究与产品数据角色，展示执行状态、来源链接和数据模式，最后生成可反馈、可导出的研究结果。
 
 ![研究报告界面](docs/interview/assets/report-1440x900.png)
 
@@ -18,14 +18,14 @@
 
 - `frontend/`：React + TypeScript 桌面研究工作台，通过 REST 创建/恢复任务，通过 WebSocket 接收过程事件。
 - `api/`：FastAPI 协议层、任务生命周期、健康检查、上传下载与版本化事件。
-- `agent/`：主协调 Agent、三个研究角色和惰性模型初始化。
+- `agent/`：主协调 Agent、公开研究/产品数据两个研究角色和惰性模型初始化。
 - `tools/`：知乎全网搜索、只读 MySQL、附件读取与文档生成；外部服务不可用时可透明返回 demo 数据。
 - `evals/`：24 条当前评测样本、历史 V1/V2 Prompt 快照、自动评分与报告生成。
 - `analytics/`：不记录 Prompt 或文件内容的产品事件契约与离线漏斗分析。
 
 ## 当前证据
 
-- 后端：61 个自动化测试通过，包括模型兼容、路径边界、上传限制、只读 SQL、服务降级、任务状态、事件恢复、真实评测执行边界和离线端到端链路。
+- 后端：67 个自动化测试通过，包括模型兼容、URL 引用保留、路径边界、上传限制、只读 SQL、服务降级、任务状态、事件恢复、真实评测执行边界和离线端到端链路。
 - 前端：3 个 Vitest 测试、生产构建和 1 条 Playwright 完整浏览器流程通过。
 - 真实基础链路：Swagger/OpenAPI、任务创建与快照、WebSocket 中文 `ping/pong` 已在本地服务验证。
 - 知乎搜索与 Word COM 转 PDF 曾真实验证成功；MySQL 当前以明确标记的 demo 数据降级。RAGFlow 已从项目移除。
@@ -55,7 +55,7 @@ npm run dev
 ```powershell
 .\.venv\Scripts\python.exe -m pytest -q
 .\.venv\Scripts\python.exe -m pip check
-.\.venv\Scripts\python.exe -m compileall -q agent api tools utils rawflow evals analytics test
+.\.venv\Scripts\python.exe -m compileall -q agent api tools utils evals analytics test
 
 Set-Location frontend
 npm run test:run
@@ -67,11 +67,11 @@ npm run e2e
 
 1. 提交“比较 AI Agent 平台并说明取舍”的复杂任务，可附加个人资料。
 2. 展示并确认执行计划。
-3. 观察三个研究角色、实时来源与 demo 降级标记。
+3. 观察公开研究与产品数据两个角色、实时来源链接与 demo 降级标记。
 4. 打开带来源的研究结论，提交反馈并尝试导出 PDF。
-5. 展示服务状态、30 例评测集、失败复盘与下一轮策略假设。
+5. 展示服务状态、24 例当前评测集、失败复盘与下一轮策略假设。
 
-完整讲述见 [演示脚本](docs/interview/demo-script.md)，产品指标见 [指标设计](docs/interview/product-metrics.md)，项目取舍见 [复盘](docs/interview/project-retrospective.md)。
+完整讲述见 [演示脚本](docs/interview/demo-script.md)，产品指标见 [指标设计](docs/interview/product-metrics.md)，项目取舍见 [复盘](docs/interview/project-retrospective.md)，真人测试可直接使用 [可用性测试计划](docs/interview/usability-test-plan.md)。
 
 三个关键画面的可编辑设计稿位于 [Figma 面试原型](https://www.figma.com/design/8GP7rnke9XmoqQuAUJ3JiX)。
 

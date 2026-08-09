@@ -20,6 +20,8 @@ from pathlib import Path
 
 from api.context import set_session_context, reset_session_context, set_thread_context
 from api.task_manager import TaskState, task_manager
+from utils.citations import append_source_links
+from utils.citations import requests_public_sources
 
 from langchain_core.messages import AIMessage
 
@@ -98,6 +100,7 @@ async def run_deep_agent(task_query,session_id):
     # 继续准备 1. 当前会话的对应的session_id session_dir 存储到contextVars [后续工具获取，socket -> 推送消息] 2.调用monitor给前端推送session_dir信息
     session_dir_token = set_session_context(session_dir_str)  # 存储的当前会话对应的文件夹地址
     session_id_token = set_thread_context(session_id)  #获取当前会话的session_id对应socket
+    monitor.clear_source_urls(session_id)
 
     monitor.report_session_dir(session_dir_str)  # 当前会话对应的文件夹地址推送给起前端！
 
@@ -123,6 +126,7 @@ async def run_deep_agent(task_query,session_id):
     # 反馈结果
     try:
         final_result = None
+        message_contents = []
         # 执行
         async for chunk in get_main_agent().astream({
             "messages":[
@@ -137,6 +141,7 @@ async def run_deep_agent(task_query,session_id):
                 messages = state["messages"]
                 if messages and isinstance(messages,list):
                     last_msg = messages[-1]
+                    message_contents.extend(message.content for message in messages if getattr(message, "content", None))
                     if node_name == 'model':
                         if last_msg.tool_calls:
                             # 工具和子智能体
@@ -156,8 +161,20 @@ async def run_deep_agent(task_query,session_id):
                         elif last_msg.content:
                             # 最终结果
                             print(f"主智能体执行结果，最终结果：{last_msg.content[:100]}")
-                            monitor.report_task_result(last_msg.content)
                             final_result = last_msg.content
+
+        source_urls = monitor.take_source_urls(session_id)
+        if not source_urls and requests_public_sources(task_query):
+            from api.settings import get_settings
+            from tools.zhihu_search_tool import ZhihuSearchClient
+
+            search_result = ZhihuSearchClient(
+                get_settings().zhihu_access_secret,
+                timeout_seconds=get_settings().request_timeout_seconds,
+            ).search(task_query, count=3)
+            source_urls = [item.url for item in search_result.items if item.url]
+        final_result = append_source_links(final_result or "", message_contents + source_urls)
+        monitor.report_task_result(final_result)
 
         try:
             await task_manager.transition(session_id, TaskState.SUCCEEDED, {"result": final_result or ""})
@@ -172,6 +189,7 @@ async def run_deep_agent(task_query,session_id):
         except (KeyError, ValueError):
             pass
     finally:
+        monitor.take_source_urls(session_id)
         # 释放存储的地址和session_id
         reset_session_context(session_dir_token, session_id_token)
 

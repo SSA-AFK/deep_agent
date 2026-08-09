@@ -33,6 +33,7 @@ class ToolMonitor:
         if cls._instance is None:
             cls._instance = super(ToolMonitor, cls).__new__(cls)
             cls._instance.websocket_manager = None  # 预留给 FastAPI WebSocketManager
+            cls._instance.source_urls = {}
         return cls._instance
 
     def set_websocket_manager(self, manager):
@@ -116,6 +117,27 @@ class ToolMonitor:
     def report_session_dir(self, path: str):
         """报告任务工作目录"""
         self._emit("session_created", f"工作目录已创建: {path}", {"path": path})
+
+    def record_source_urls(self, urls: list[str], thread_id: str | None = None):
+        """Record public URLs for the active task without emitting credentials."""
+        thread_id = thread_id or get_thread_context()
+        if thread_id:
+            recorded = self.source_urls.setdefault(thread_id, [])
+            for url in urls:
+                if url not in recorded:
+                    recorded.append(url)
+
+    def take_source_urls(self, thread_id: str) -> list[str]:
+        """Return and clear a task's public source URLs."""
+        urls: list[str] = []
+        for key in [key for key in self.source_urls if key == thread_id or key.startswith(f"{thread_id}:")]:
+            for url in self.source_urls.pop(key):
+                if url not in urls:
+                    urls.append(url)
+        return urls
+
+    def clear_source_urls(self, thread_id: str):
+        self.source_urls.pop(thread_id, None)
 
 
 # 全局单例实例

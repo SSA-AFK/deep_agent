@@ -137,7 +137,7 @@ PDF 转换依赖 Windows、Microsoft Word 和 COM。仅安装 Python 依赖不�
 - FastAPI、DeepAgents、LangChain/LangGraph、MySQL、文档相关包可导入。
 - `api.server` 可导入并创建名为 `DeepAgents API` 的 FastAPI 应用。
 - 项目已初始化 Git，当前分支为 `main`。
-- 后端自动化测试基线为 62 条，覆盖设置、模型兼容、契约、知乎搜索、健康检查、路径与上传安全、只读 SQL、任务生命周期、真实评测执行边界、埋点与离线端到端流程。
+- 后端自动化测试基线为 67 条，覆盖设置、模型兼容、引用保留、契约、知乎搜索、健康检查、路径与上传安全、只读 SQL、任务生命周期、真实评测执行边界、埋点与离线端到端流程。
 - 前端具有 React/TypeScript 桌面工作台、Vitest 组件/状态测试、生产构建和 Playwright 浏览器流程。
 - 当前评测目录包含 24 条固定样本；移除前的 V1/V2 各 30 条运行仅作为历史基线，脱敏聚合结果见 `docs/interview/evaluation-report.md`。
 
@@ -160,6 +160,7 @@ PDF 转换依赖 Windows、Microsoft Word 和 COM。仅安装 Python 依赖不�
 - Windows GBK 控制台 Unicode 输出问题已改为 ASCII 安全日志，并有回归覆盖。
 - 当前环境已配置知乎凭据，需在本次移除后的全链路验证中确认真实搜索结果；历史 V1/V2 在知乎未配置时运行，其 URL 型引用指标为 0，不能把自动评分等同于事实正确或引用完整性。
 - 人工盲评尚未执行；不得把自动评分描述为人工评审结论。
+- 移除 RAGFlow 后的 V3 当前 24 条真实评测完成率为 58.3%（14/24），公开搜索路由稳定性仍需优化；逐条 URL 引用具有单元测试覆盖，但端到端中文任务复测曾在 120 秒超时，不能声称已完成效果提升。
 
 不得把“模块可导入”描述成“项目端到端可运行”。每次更新通过状态时必须附有当次实际执行命令和结果。
 
@@ -269,3 +270,4 @@ PDF 转换依赖 Windows、Microsoft Word 和 COM。仅安装 Python 依赖不�
 | 2026-08-09 | 接入 DeepSeek V4 Flash 并关闭该模型的 thinking 模式以兼容工具强制调用；完成 V1/V2 各 30 条真实评测与固定任务三次 API 验证 | DeepSeek 直连和工具调用通过；V1 完成 8/30，V2 完成 24/30；固定任务三次均 `succeeded`（70.0、12.3、8.2 秒）；详情见 `docs/interview/evaluation-report.md`，人工盲评仍未开始 |
 | 2026-08-09 | 将 `deepseek_api.env` 纳入本地配置加载名单 | 定向设置与模型兼容测试 8 条通过；安全摘要确认 DeepSeek V4 Flash 已配置，未输出凭据 |
 | 2026-08-09 | 按用户要求移除 RAGFlow 的生产接入、实验代码、配置与当前评测路由；修复知乎 API 的 `Data.Items` 响应兼容 | 删除范围限定在仓库内的 RAGFlow 模块和无引用实验文件；Python 62 条测试、依赖检查、编译、前端 3 条测试和生产构建通过；知乎真实工具调用返回 `success/live` |
+| 2026-08-09 | 统一面试材料、增加公开 URL 保留逻辑、生成 5 人可用性测试计划并完成移除 RAGFlow 后的 V3 评测 | V3 24 条真实样本完成率 58.3%；引用逻辑单元测试通过，端到端中文复测超时，详见 `docs/interview/evaluation-report.md` |
