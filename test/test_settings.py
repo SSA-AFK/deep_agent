@@ -36,6 +36,15 @@ def test_numbered_env_file_is_supported(tmp_path):
     assert settings.model_configured is True
 
 
+def test_deepseek_named_env_file_is_supported(tmp_path):
+    env_file = tmp_path / "deepseek_api.env"
+    env_file.write_text("DEEPSEEK_API_KEY=test-key\n", encoding="utf-8")
+    settings = Settings(_env_file=env_file)
+
+    assert settings.active_model == "deepseek-v4-flash"
+    assert settings.model_configured is True
+
+
 def test_dashscope_key_alias_configures_openai_compatible_model():
     settings = Settings(
         _env_file=None,

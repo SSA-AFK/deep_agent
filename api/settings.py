@@ -10,7 +10,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     """Runtime settings loaded from environment variables or the local `.env` file."""
 
-    model_config = SettingsConfigDict(env_file=(".env", "(1).env"), extra="ignore", populate_by_name=True)
+    model_config = SettingsConfigDict(env_file=(".env", "(1).env", "deepseek_api.env"), extra="ignore", populate_by_name=True)
 
     llm_model: str | None = Field(default=None, validation_alias="LLM_MODEL")
     llm_qwen_3: str | None = Field(default=None, validation_alias="LLM_QWEN3")

@@ -141,7 +141,7 @@ PDF 转换依赖 Windows、Microsoft Word 和 COM。仅安装 Python 依赖不�
 - FastAPI、DeepAgents、LangChain/LangGraph、MySQL、RAGFlow、文档相关包可导入。
 - `api.server` 可导入并创建名为 `DeepAgents API` 的 FastAPI 应用。
 - 项目已初始化 Git，当前分支为 `main`。
-- 后端自动化测试基线为 61 条，覆盖设置、模型兼容、契约、知乎搜索、健康检查、路径与上传安全、只读 SQL、RAGFlow 降级、任务生命周期、真实评测执行边界、埋点与离线端到端流程。
+- 后端自动化测试基线为 62 条，覆盖设置、模型兼容、契约、知乎搜索、健康检查、路径与上传安全、只读 SQL、RAGFlow 降级、任务生命周期、真实评测执行边界、埋点与离线端到端流程。
 - 前端具有 React/TypeScript 桌面工作台、Vitest 组件/状态测试、生产构建和 Playwright 浏览器流程。
 - 评测目录包含 30 条固定样本和 V1/V2 Prompt 快照；两版均已在 DeepSeek V4 Flash、相同 90 秒超时和相同外部服务状态下真实运行 30 条，脱敏聚合结果见 `docs/interview/evaluation-report.md`。
 
@@ -175,7 +175,7 @@ PDF 转换依赖 Windows、Microsoft Word 和 COM。仅安装 Python 依赖不�
 2. 任务状态、事件缓存和连接管理仍是单进程内存实现，不适合多实例部署。
 3. WebSocket 当前每个任务只保存一个活动连接，尚不支持同任务多客户端。
 4. 上传已限制标识、文件名、大小、数量和类型，但尚无全局并发与用户配额。
-5. `.env` 和 `(1).env` 含敏感配置；不得提交、打印或复制其值。
+5. `.env`、`(1).env` 和 `deepseek_api.env` 含敏感配置；不得提交、打印或复制其值。
 
 已落地的代码级约束：会话路径拒绝绝对路径与越界；文件 API 仅返回输出目录相对路径；SQL 工具仅允许有限的单条只读查询；公开错误不回传原始服务异常。
 
@@ -271,3 +271,4 @@ PDF 转换依赖 Windows、Microsoft Word 和 COM。仅安装 Python 依赖不�
 | 2026-08-08 | 批准 Coze 面试版设计；确定 ChatGPT 式桌面工作台、知乎全网搜索、真实服务优先与透明 demo 降级；将本文件设为唯一持续迭代文档 | 知乎 API 真实请求通过；FastAPI/WebSocket/上传/Word PDF 通过；模型、MySQL、RAGFlow 阻塞原因已定位 |
 | 2026-08-09 | `(1).env` 加载、DashScope 变量别名与模型优先级已兼容；Qwen3 候选优先于旧的 Qwen Max 候选 | `pytest` 58 条通过；`pip check` 和编译通过；切换后健康检查仍返回 `LLM_AUTH_FAILED`（HTTP 401），未输出任何密钥 |
 | 2026-08-09 | 接入 DeepSeek V4 Flash 并关闭该模型的 thinking 模式以兼容工具强制调用；完成 V1/V2 各 30 条真实评测与固定任务三次 API 验证 | DeepSeek 直连和工具调用通过；V1 完成 8/30，V2 完成 24/30；固定任务三次均 `succeeded`（70.0、12.3、8.2 秒）；详情见 `docs/interview/evaluation-report.md`，人工盲评仍未开始 |
+| 2026-08-09 | 将 `deepseek_api.env` 纳入本地配置加载名单 | 定向设置与模型兼容测试 8 条通过；安全摘要确认 DeepSeek V4 Flash 已配置，未输出凭据 |
