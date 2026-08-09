@@ -21,3 +21,10 @@ def append_source_links(answer: str, message_contents: list[object]) -> str:
 
 def requests_public_sources(query: str) -> bool:
     return any(marker in query for marker in _SOURCE_REQUEST_MARKERS)
+
+
+def render_public_source_fallback(items: list[tuple[str, str, str]]) -> str:
+    lines = ["Agent 在时限内未完成综合，以下为可直接核验的公开检索结果："]
+    for title, snippet, url in items:
+        lines.append(f"- {title}：{snippet}\n  {url}")
+    return "\n".join(lines)

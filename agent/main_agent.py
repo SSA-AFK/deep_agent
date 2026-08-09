@@ -22,6 +22,7 @@ from api.context import set_session_context, reset_session_context, set_thread_c
 from api.task_manager import TaskState, task_manager
 from utils.citations import append_source_links
 from utils.citations import requests_public_sources
+from utils.citations import render_public_source_fallback
 
 from langchain_core.messages import AIMessage
 
@@ -106,6 +107,7 @@ async def run_deep_agent(task_query,session_id):
 
     # 执行main_agent
     config = {
+        "recursion_limit": 32,
         "configurable":{
             "thread_id":session_id
         }
@@ -128,40 +130,45 @@ async def run_deep_agent(task_query,session_id):
         final_result = None
         message_contents = []
         # 执行
-        async for chunk in get_main_agent().astream({
-            "messages":[
-                {
-                    "role":"user","content":task_query+path_instruction
-                }
-            ]
-        },config=config):
-            # {"model [大模型决定调用工具 子智能体  最终结果] / tools" : {messages:[xxx...]}}
-            for node_name,state in chunk.items():
-                if not state or "messages" not in state: continue
-                messages = state["messages"]
-                if messages and isinstance(messages,list):
-                    last_msg = messages[-1]
-                    message_contents.extend(message.content for message in messages if getattr(message, "content", None))
-                    if node_name == 'model':
-                        if last_msg.tool_calls:
-                            # 工具和子智能体
-                            for tool_call in last_msg.tool_calls:
-                                """
-                                  tool_call = {
-                                      name: task
-                                      args:{
-                                          subagent_type:子智能体的名字
-                                          description:子智能体的描述
-                                      }
-                                  }                                
-                                """
-                                if tool_call['name'] == 'task':
-                                    # 调用某个子智能体
-                                    monitor.report_assistant(tool_call['args']['subagent_type'],{'description':tool_call['args']['description']})
-                        elif last_msg.content:
-                            # 最终结果
-                            print(f"主智能体执行结果，最终结果：{last_msg.content[:100]}")
-                            final_result = last_msg.content
+        try:
+            async with asyncio.timeout(45):
+                async for chunk in get_main_agent().astream({
+                    "messages":[
+                        {
+                            "role":"user","content":task_query+path_instruction
+                        }
+                    ]
+                },config=config):
+                    # {"model [大模型决定调用工具 子智能体  最终结果] / tools" : {messages:[xxx...]}}
+                    for node_name,state in chunk.items():
+                        if not state or "messages" not in state: continue
+                        messages = state["messages"]
+                        if messages and isinstance(messages,list):
+                            last_msg = messages[-1]
+                            message_contents.extend(message.content for message in messages if getattr(message, "content", None))
+                            if node_name == 'model' and last_msg.tool_calls:
+                                for tool_call in last_msg.tool_calls:
+                                    if tool_call['name'] == 'task':
+                                        monitor.report_assistant(tool_call['args']['subagent_type'], {'description': tool_call['args']['description']})
+                            elif last_msg.content:
+                                print(f"主智能体执行结果，最终结果：{last_msg.content[:100]}")
+                                final_result = last_msg.content
+        except TimeoutError:
+            if not requests_public_sources(task_query):
+                raise
+            from api.settings import get_settings
+            from tools.zhihu_search_tool import ZhihuSearchClient
+
+            search_result = ZhihuSearchClient(
+                get_settings().zhihu_access_secret,
+                timeout_seconds=get_settings().request_timeout_seconds,
+            ).search(task_query, count=3)
+            final_result = render_public_source_fallback([
+                (item.title, item.snippet, item.url)
+                for item in search_result.items
+                if item.url
+            ])
+            message_contents = []
 
         source_urls = monitor.take_source_urls(session_id)
         if not source_urls and requests_public_sources(task_query):
