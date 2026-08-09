@@ -119,6 +119,7 @@ PDF 转换依赖 Windows、Microsoft Word 和 COM。仅安装 Python 依赖不�
 - `LLM_QWEN_MAX`
 - `LLM_QWEN3`（默认优先于 `LLM_QWEN_MAX`）
 - `LLM_MODEL`（显式指定时优先于所有候选）
+- `DEEPSEEK_API_KEY`、`DEEPSEEK_BASE_URL`、`DEEPSEEK_MODEL`（DeepSeek OpenAI 兼容配置；默认模型为 `deepseek-v4-flash`）
 - `OPENAI_API_KEY`
 - `DASHSCOPE_API_KEY`（`OPENAI_API_KEY` 的 DashScope 兼容别名）
 - `OPENAI_BASE_URL`
@@ -140,7 +141,7 @@ PDF 转换依赖 Windows、Microsoft Word 和 COM。仅安装 Python 依赖不�
 - FastAPI、DeepAgents、LangChain/LangGraph、MySQL、RAGFlow、文档相关包可导入。
 - `api.server` 可导入并创建名为 `DeepAgents API` 的 FastAPI 应用。
 - 项目已初始化 Git，当前分支为 `main`。
-- 后端自动化测试基线为 58 条，覆盖设置、契约、知乎搜索、健康检查、路径与上传安全、只读 SQL、RAGFlow 降级、任务生命周期、真实评测执行边界、埋点与离线端到端流程。
+- 后端自动化测试基线为 59 条，覆盖设置、契约、知乎搜索、健康检查、路径与上传安全、只读 SQL、RAGFlow 降级、任务生命周期、真实评测执行边界、埋点与离线端到端流程。
 - 前端具有 React/TypeScript 桌面工作台、Vitest 组件/状态测试、生产构建和 Playwright 浏览器流程。
 - 评测目录包含 30 条固定样本和与历史/当前配置逐字段一致的 V1/V2 Prompt 快照；当前没有可发布的真实 V1/V2 模型分数。
 

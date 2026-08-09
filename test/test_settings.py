@@ -20,6 +20,7 @@ def test_public_summary_never_exposes_secrets():
 def test_missing_model_key_is_not_ready(monkeypatch):
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     monkeypatch.delenv("OPENAI_BASE_URL", raising=False)
+    monkeypatch.delenv("DEEPSEEK_API_KEY", raising=False)
     settings = Settings(_env_file=None, llm_qwen_max="qwen-max")
 
     assert settings.model_configured is False
@@ -56,7 +57,16 @@ def test_active_model_prefers_explicit_then_qwen3():
 
     qwen3_settings = Settings(
         _env_file=None,
+        deepseek_api_key=None,
         llm_qwen_3="qwen3-model",
         llm_qwen_max="qwen-max-model",
     )
     assert qwen3_settings.active_model == "qwen3-model"
+
+
+def test_deepseek_key_selects_v4_flash_and_official_default_endpoint():
+    settings = Settings(_env_file=None, deepseek_api_key="test-key")
+    assert settings.active_model == "deepseek-v4-flash"
+    assert settings.active_api_key == "test-key"
+    assert settings.active_base_url == "https://api.deepseek.com"
+    assert settings.model_configured is True

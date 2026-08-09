@@ -16,6 +16,9 @@ class Settings(BaseSettings):
     llm_qwen_3: str | None = Field(default=None, validation_alias="LLM_QWEN3")
     llm_qwen_max: str | None = Field(default=None, validation_alias="LLM_QWEN_MAX")
     llm_qwen_2_5: str | None = Field(default=None, validation_alias="LLM_QWEN2.5")
+    deepseek_model: str = Field(default="deepseek-v4-flash", validation_alias="DEEPSEEK_MODEL")
+    deepseek_api_key: str | None = Field(default=None, validation_alias="DEEPSEEK_API_KEY")
+    deepseek_base_url: str = Field(default="https://api.deepseek.com", validation_alias="DEEPSEEK_BASE_URL")
     openai_api_key: str | None = Field(
         default=None,
         validation_alias=AliasChoices("OPENAI_API_KEY", "DASHSCOPE_API_KEY"),
@@ -42,19 +45,31 @@ class Settings(BaseSettings):
 
     @property
     def model_configured(self) -> bool:
-        return bool(self.active_model and self.openai_api_key and self.openai_base_url)
+        return bool(self.active_model and self.active_api_key and self.active_base_url)
 
     @property
     def active_model(self) -> str | None:
-        """Prefer an explicit choice, then the newer configured Qwen candidate."""
-        return self.llm_model or self.llm_qwen_3 or self.llm_qwen_max or self.llm_qwen_2_5
+        """Prefer an explicit choice, then configured DeepSeek V4 Flash or Qwen."""
+        if self.llm_model:
+            return self.llm_model
+        if self.deepseek_api_key:
+            return self.deepseek_model
+        return self.llm_qwen_3 or self.llm_qwen_max or self.llm_qwen_2_5
+
+    @property
+    def active_api_key(self) -> str | None:
+        return self.deepseek_api_key or self.openai_api_key
+
+    @property
+    def active_base_url(self) -> str | None:
+        return self.deepseek_base_url if self.deepseek_api_key else self.openai_base_url
 
     def public_summary(self) -> dict[str, object]:
         """Return configuration state without including credentials or full URLs."""
         return {
             "model_configured": self.model_configured,
             "model_name_configured": bool(self.active_model),
-            "openai_endpoint_host": _hostname(self.openai_base_url),
+            "openai_endpoint_host": _hostname(self.active_base_url),
             "zhihu_configured": bool(self.zhihu_access_secret),
             "mysql_configured": bool(self.mysql_user and self.mysql_password and self.mysql_database),
             "mysql_host": self.mysql_host,
