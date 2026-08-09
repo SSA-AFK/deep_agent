@@ -41,7 +41,7 @@ main_agent:
     4. 如果你需要先搜索再生成，请分两步进行：第一步只调用搜索工具；第二步根据搜索结果调用生成工具。不要在一步（同一个 Tool Call 列表）中同时做这两件事。
 # Sub Agents Configuration
 sub_agents:
-  tavily:
+  zhihu:
     name: "网络搜索助手"
     description: | 
       负责进行网络知识搜索的智能体助手，当需要从网络中查询数据的时候，可以执行数据检索，在检索后会返回一段检索结果.

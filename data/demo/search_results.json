@@ -1,0 +1,16 @@
+[
+  {
+    "title": "AI Agent 平台选型：评估维度与实践建议",
+    "url": "https://www.zhihu.com/question/demo-agent-platform",
+    "snippet": "演示数据：比较平台集成能力、可观测性、成本和安全边界。",
+    "source": "zhihu_global_search",
+    "metadata": {"content_type": "answer", "author_name": "演示研究员", "authority_level": 1}
+  },
+  {
+    "title": "构建可追溯研究工作流的关键要点",
+    "url": "https://www.zhihu.com/question/demo-research-workflow",
+    "snippet": "演示数据：来源、降级状态和人工复核应在结果中可见。",
+    "source": "zhihu_global_search",
+    "metadata": {"content_type": "article", "author_name": "演示编辑部", "authority_level": 1}
+  }
+]
