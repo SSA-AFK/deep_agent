@@ -11,4 +11,6 @@ test("renders product name and submits a research question", () => {
   fireEvent.click(screen.getByText("确认并开始"));
   expect(screen.getByText("研究正在进行")).toBeInTheDocument();
   expect(screen.getAllByText("演示来源")).toHaveLength(2);
+  fireEvent.click(screen.getByText("查看模拟报告"));
+  expect(screen.getByText("优先选择可观察、可接管的工作流")).toBeInTheDocument();
 });
