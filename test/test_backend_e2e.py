@@ -48,3 +48,7 @@ def test_offline_task_websocket_feedback_files_and_export(monkeypatch, tmp_path)
         downloaded = client.get("/api/download", params={"path": files[0]["path"]})
         assert downloaded.status_code == 200
         assert downloaded.content.startswith(b"%PDF")
+
+        analytics = (tmp_path / "analytics.jsonl").read_text(encoding="utf-8")
+        for name in ("task_submitted", "plan_confirmed", "task_completed", "feedback_submitted", "report_exported"):
+            assert f'"name":"{name}"' in analytics

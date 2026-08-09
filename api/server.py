@@ -27,6 +27,11 @@ from api.settings import get_settings
 from api.task_manager import TaskState, task_manager
 
 async def _broadcast_task_event(event: dict) -> None:
+    state = event.get("data", {}).get("state")
+    if state == TaskState.SUCCEEDED:
+        _record_product_event("task_completed", event["thread_id"])
+    elif state == TaskState.FAILED:
+        _record_product_event("task_failed", event["thread_id"])
     await manager.send_to_thread(event, event["thread_id"])
 
 
