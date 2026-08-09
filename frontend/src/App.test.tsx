@@ -2,7 +2,15 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { expect, test, vi } from "vitest";
 import App from "./App";
 
-vi.mock("./api/client", () => ({ api: { createTask: vi.fn().mockResolvedValue({ thread_id: "test-1" }), upload: vi.fn().mockResolvedValue({ files: [] }), confirm: vi.fn().mockResolvedValue({}) } }));
+vi.mock("./api/client", () => ({ api: {
+  createTask: vi.fn().mockResolvedValue({ thread_id: "test-1" }),
+  upload: vi.fn().mockResolvedValue({ files: [] }),
+  confirm: vi.fn().mockResolvedValue({}),
+  feedback: vi.fn().mockResolvedValue({ status: "recorded" }),
+  files: vi.fn().mockResolvedValue({ files: [] }),
+  recordExport: vi.fn().mockResolvedValue({ status: "recorded" }),
+  downloadUrl: vi.fn().mockReturnValue("/api/download?path=report.pdf"),
+} }));
 
 test("renders product name and submits a research question", async () => {
   render(<App />);
@@ -17,4 +25,8 @@ test("renders product name and submits a research question", async () => {
   expect(screen.getAllByText("演示来源")).toHaveLength(2);
   fireEvent.click(screen.getByText("查看模拟报告"));
   expect(screen.getByText("优先选择可观察、可接管的工作流")).toBeInTheDocument();
+  fireEvent.click(screen.getByLabelText("有帮助"));
+  expect(await screen.findByText("反馈已记录")).toBeInTheDocument();
+  fireEvent.click(screen.getByText("导出 PDF"));
+  expect(await screen.findByText("暂未生成 PDF，可稍后重试")).toBeInTheDocument();
 });

@@ -20,4 +20,8 @@ export const api = {
   },
   confirm: (threadId: string) => request(`/api/tasks/${threadId}/confirm`, { method: "POST" }),
   cancel: (threadId: string) => request(`/api/tasks/${threadId}/cancel`, { method: "POST" }),
+  feedback: (threadId: string, helpful: boolean, reason?: string) => request(`/api/tasks/${threadId}/feedback`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ helpful, reason }) }),
+  recordExport: (threadId: string) => request(`/api/tasks/${threadId}/export`, { method: "POST" }),
+  files: (threadId: string) => request<{ files: Array<{ name: string; path: string }> }>(`/api/files?path=${encodeURIComponent(`session_${threadId}`)}`),
+  downloadUrl: (path: string) => `${API_BASE}/api/download?path=${encodeURIComponent(path)}`,
 };

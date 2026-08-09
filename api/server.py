@@ -10,6 +10,9 @@ from typing import List
 import shutil
 import json
 from datetime import datetime, timezone
+from contextlib import asynccontextmanager
+
+from analytics.events import ProductEvent, append_event
 
 # Add project root to sys.path
 current_dir = Path(__file__).resolve().parent
@@ -23,7 +26,18 @@ from api.health import get_service_registry
 from api.settings import get_settings
 from api.task_manager import TaskState, task_manager
 
-app = FastAPI(title="DeepAgents API")
+async def _broadcast_task_event(event: dict) -> None:
+    await manager.send_to_thread(event, event["thread_id"])
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    manager.set_loop(asyncio.get_running_loop())
+    task_manager.subscribe(_broadcast_task_event)
+    yield
+
+
+app = FastAPI(title="DeepAgents API", lifespan=lifespan)
 
 
 @app.get("/api/health")
@@ -56,18 +70,6 @@ class FeedbackRequest(BaseModel):
     helpful: bool
     reason: str | None = None
 
-@app.on_event("startup")
-async def startup_event():
-    """
-    服务启动时，获取当前运行的事件循环，并绑定到 WebSocket 管理器。
-    确保后台线程能通过 run_coroutine_threadsafe 准确投递消息。
-    """
-    loop = asyncio.get_running_loop()
-    manager.set_loop(loop)
-    task_manager.subscribe(lambda event: manager.send_to_thread(event, event["thread_id"]))
-    print(f"[Server] WebSocket Manager bound to loop: {id(loop)}")
-
-
 @app.post("/api/task")
 async def run_task(request: TaskRequest):
     # 1. [ID 初始化]
@@ -78,6 +80,8 @@ async def run_task(request: TaskRequest):
         await task_manager.transition(thread_id, TaskState.WAITING_CONFIRMATION, {"plan": ["确认研究目标", "检索并汇总来源"]})
     except ValueError as error:
         raise HTTPException(status_code=409, detail=str(error)) from error
+
+    _record_product_event("task_submitted", thread_id)
 
     # 3. [立即响应]
     return {"status": "waiting_confirmation", "thread_id": thread_id}
@@ -100,6 +104,7 @@ async def confirm_task(thread_id: str):
     except ValueError as error:
         raise HTTPException(status_code=409, detail=str(error)) from error
     task.background_task = asyncio.create_task(run_deep_agent(task.query, thread_id))
+    _record_product_event("plan_confirmed", thread_id)
     return {"status": task.state, "thread_id": thread_id}
 
 
@@ -129,7 +134,25 @@ async def submit_feedback(thread_id: str, feedback: FeedbackRequest):
     feedback_path = output_dir / "feedback.jsonl"
     with feedback_path.open("a", encoding="utf-8") as file:
         file.write(json.dumps(record, ensure_ascii=False) + "\n")
+    _record_product_event("feedback_submitted", thread_id)
     return {"status": "recorded"}
+
+
+@app.post("/api/tasks/{thread_id}/export")
+async def record_export(thread_id: str):
+    try:
+        await task_manager.snapshot(thread_id)
+    except KeyError:
+        raise HTTPException(status_code=404, detail="Task not found.")
+    _record_product_event("report_exported", thread_id)
+    return {"status": "recorded"}
+
+
+def _record_product_event(name: str, thread_id: str) -> None:
+    append_event(
+        output_dir / "analytics.jsonl",
+        ProductEvent(name=name, task_id=thread_id, timestamp=datetime.now(timezone.utc)),
+    )
 
 
 @app.post("/api/upload")
