@@ -126,7 +126,7 @@ PDF 转换依赖 Windows、Microsoft Word 和 COM。仅安装 Python 依赖不�
 
 ## 7. 当前验证基线
 
-最后更新：2026-08-08。
+最后更新：2026-08-09。
 
 已确认：
 
@@ -134,9 +134,12 @@ PDF 转换依赖 Windows、Microsoft Word 和 COM。仅安装 Python 依赖不�
 - `requirements.txt` 可在 Python 3.13 的 `.venv` 中完成安装。
 - `.venv` 中 `pip check` 返回无依赖冲突。
 - Python 源码可完成语法编译。
-- FastAPI、DeepAgents、LangChain/LangGraph、Tavily、MySQL、RAGFlow、文档相关包可导入。
+- FastAPI、DeepAgents、LangChain/LangGraph、MySQL、RAGFlow、文档相关包可导入。
 - `api.server` 可导入并创建名为 `DeepAgents API` 的 FastAPI 应用。
 - 项目已初始化 Git，当前分支为 `main`。
+- 后端自动化测试基线为 54 条，覆盖设置、契约、知乎搜索、健康检查、路径与上传安全、只读 SQL、RAGFlow 降级、任务生命周期、评测、埋点与离线端到端流程。
+- 前端具有 React/TypeScript 桌面工作台、Vitest 组件/状态测试、生产构建和 Playwright 浏览器流程。
+- 评测目录包含 30 条固定样本和与历史/当前配置逐字段一致的 V1/V2 Prompt 快照；当前没有可发布的真实 V1/V2 模型分数。
 
 进一步实测已确认：
 
@@ -145,15 +148,17 @@ PDF 转换依赖 Windows、Microsoft Word 和 COM。仅安装 Python 依赖不�
 - 文件上传可保存到对应会话目录。
 - 知乎开放平台全网搜索 API 真实请求返回 HTTP 200、API Code 0 和有效内容。
 - Word COM 可完成 Markdown 到 PDF 转换。
-- 完整任务可创建会话并推送 `session_created` 与终态 `error` 事件。
+- 真实服务可创建等待确认的任务、读取恢复快照，并通过版本化事件管理任务状态。
+- 确定性离线端到端流程已覆盖任务创建、计划确认、WebSocket、终态结果、反馈、文件列表、PDF 下载和导出埋点。
+- 浏览器级模拟流程覆盖任务提交、计划确认、多 Agent 过程、透明降级、报告、反馈和导出失败恢复，并在 1024×768、1440×900、1920×1080 三个视口生成并检查截图。
 
 当前未通过或处于阻塞状态：
 
 - DashScope 模型返回 401 `invalid_api_key`，是 Agent 联调的硬阻塞。
 - MySQL 返回 1045 `Access denied`，面试版先使用透明 demo 降级。
 - RAGFlow 服务地址返回 502，面试版先使用透明 demo 降级。
-- Windows 默认 GBK stdout 会被 `tools/markdown_tools.py` 中的 Unicode 警告符号触发 `UnicodeEncodeError`；临时启用 UTF-8 后 Markdown/PDF 链路通过。
-- `.venv` 未安装 `pytest`，`test/test_01.py` 为空，尚无自动化测试基线。
+- Windows GBK 控制台 Unicode 输出问题已改为 ASCII 安全日志，并有回归覆盖。
+- 由于模型认证失败，30 条 V1/V2 真实运行、盲评和固定案例 3 次真实 Agent 成功验证尚未执行；报告必须继续显示“无实测分数”，不得把离线 fake/mock 结果描述为真实模型效果。
 
 不得把“模块可导入”描述成“项目端到端可运行”。每次更新通过状态时必须附有当次实际执行命令和结果。
 
@@ -161,13 +166,13 @@ PDF 转换依赖 Windows、Microsoft Word 和 COM。仅安装 Python 依赖不�
 
 以下问题在公开部署或正式演示前优先处理：
 
-1. `thread_id` 和上传文件名未经充分净化，存在路径越界风险。
-2. `resolve_path()` 可能放行会话目录外的绝对路径。
-3. `execute_sql_query()` 当前允许任意 SQL，且数据库连接启用自动提交。
-4. 服务缺少认证、授权、会话归属和调用限额。
-5. `/api/files` 返回服务器绝对路径。
-6. 上传缺少大小、数量、类型和并发限制。
-7. `.env` 和 `(1).env` 含敏感配置；不得提交、打印或复制其值。
+1. 服务缺少认证、授权、会话归属和调用限额。
+2. 任务状态、事件缓存和连接管理仍是单进程内存实现，不适合多实例部署。
+3. WebSocket 当前每个任务只保存一个活动连接，尚不支持同任务多客户端。
+4. 上传已限制标识、文件名、大小、数量和类型，但尚无全局并发与用户配额。
+5. `.env` 和 `(1).env` 含敏感配置；不得提交、打印或复制其值。
+
+已落地的代码级约束：会话路径拒绝绝对路径与越界；文件 API 仅返回输出目录相对路径；SQL 工具仅允许有限的单条只读查询；公开错误不回传原始服务异常。
 
 测试数据库能力时：
 
@@ -259,3 +264,4 @@ PDF 转换依赖 Windows、Microsoft Word 和 COM。仅安装 Python 依赖不�
 | --- | --- | --- |
 | 2026-08-08 | 创建项目级 `AGENTS.md`，确立 Coze 面试目标、项目边界、安全规则和验证基线 | 对照当前仓库结构、`.venv`、Git 状态和既有项目调研记录 |
 | 2026-08-08 | 批准 Coze 面试版设计；确定 ChatGPT 式桌面工作台、知乎全网搜索、真实服务优先与透明 demo 降级；将本文件设为唯一持续迭代文档 | 知乎 API 真实请求通过；FastAPI/WebSocket/上传/Word PDF 通过；模型、MySQL、RAGFlow 阻塞原因已定位 |
+| 2026-08-09 | 完成安全后端、任务恢复、桌面工作台、30 例评测框架、隐私安全埋点与面试材料；真实模型评测保持阻塞状态 | `pytest` 54 条通过；Vitest 3 条、Vite 构建、Playwright 1 条通过；真实 REST/WebSocket 冒烟通过；外部模型仍返回 401 |
