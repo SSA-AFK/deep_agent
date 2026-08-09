@@ -196,12 +196,7 @@ async def download_file(path: str):
     """
     # 1. [安全检查] 路径解析与越权校验
     try:
-        abs_path = Path(path).resolve()
-        output_abs = output_dir.resolve()
-
-        # 必须确保请求的文件在 output 目录下
-        if not abs_path.is_relative_to(output_abs):
-            return {"error": "拒绝访问: 只能下载输出目录下的文件"}
+        abs_path = _resolve_output_path(path)
     except Exception:
         return {"error": "无效的路径参数"}
     # 2. [存在性检查]
@@ -230,13 +225,7 @@ async def list_files(path: str):
 
     try:
         # 2. [解析] 获取绝对路径对象
-        abs_path = Path(path).resolve()
-        output_abs = output_dir.resolve()
-
-        # 3. [安全] 检查路径是否越界 (Path Traversal Check)
-        if not abs_path.is_relative_to(output_abs):
-            print(f"[ERROR] 拒绝访问: {abs_path} 不在 {output_abs} 目录下")
-            return {"error": "拒绝访问: 只能访问输出目录下的文件"}
+        abs_path = _resolve_output_path(path)
 
     except Exception as e:
         print(f"[ERROR] 路径解析失败: {e}")
@@ -256,7 +245,7 @@ async def list_files(path: str):
                 files.append({
                     "name": file_path.name,
                     "type": "file",
-                    "path": str(file_path),
+                    "path": file_path.relative_to(output_dir.resolve()).as_posix(),
                     # "url": f"/outputs/{url_path}",
                     "size": stat.st_size,
                     "mtime": stat.st_mtime
@@ -270,6 +259,17 @@ async def list_files(path: str):
     files.sort(key=lambda x: x.get("mtime", 0), reverse=True)
     print(f"[DEBUG] 找到 {len(files)} 个文件")
     return {"files": files}
+
+
+def _resolve_output_path(path: str) -> Path:
+    candidate_path = Path(path)
+    if candidate_path.is_absolute() or ":" in path or "%2f" in path.lower() or "%5c" in path.lower():
+        raise ValueError("Only relative output paths are allowed.")
+    output_abs = output_dir.resolve()
+    candidate = (output_abs / path).resolve()
+    if not candidate.is_relative_to(output_abs):
+        raise ValueError("Output path escaped the output directory.")
+    return candidate
 
 
 # 当浏览器请求 ws://localhost:8000/ws/thread_123 时：
