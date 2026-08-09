@@ -6,3 +6,5 @@
 4. 展示三个研究角色、live/demo 来源和单源降级。
 5. 展示事实、观点、推断与引用分离的报告，并提交反馈。
 6. 用评测集和失败案例说明下一轮迭代，不展示无法复现的提升数据。
+
+设计备份：[Deep Search Pro Figma 面试原型](https://www.figma.com/design/8GP7rnke9XmoqQuAUJ3JiX)，包含计划确认、透明降级执行和带来源报告三个可编辑画面。

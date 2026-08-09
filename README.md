@@ -73,6 +73,8 @@ npm run e2e
 
 完整讲述见 [演示脚本](docs/interview/demo-script.md)，产品指标见 [指标设计](docs/interview/product-metrics.md)，项目取舍见 [复盘](docs/interview/project-retrospective.md)。
 
+三个关键画面的可编辑设计稿位于 [Figma 面试原型](https://www.figma.com/design/8GP7rnke9XmoqQuAUJ3JiX)。
+
 ## 安全与限制
 
 - 当前任务状态和 WebSocket 连接为单进程内存实现，不支持多实例持久化和完整事件重放。
