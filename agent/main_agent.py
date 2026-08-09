@@ -1,4 +1,3 @@
-from agent.subagents.knowledge_base_agent import knowledge_base_agent
 from agent.subagents.database_query_agent import database_query_agent
 from agent.subagents.network_search_agent import network_search_agent
 from langgraph.checkpoint.memory import InMemorySaver
@@ -36,7 +35,7 @@ def get_main_agent():
             system_prompt=main_agent_content['system_prompt'],
             tools=[generate_markdown, convert_md_to_pdf, read_file_content],
             checkpointer=InMemorySaver(),
-            subagents=[database_query_agent, network_search_agent, knowledge_base_agent],
+            subagents=[database_query_agent, network_search_agent],
         )
     return _main_agent
 

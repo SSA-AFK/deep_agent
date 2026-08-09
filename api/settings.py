@@ -31,8 +31,6 @@ class Settings(BaseSettings):
     mysql_user: str | None = Field(default=None, validation_alias="MYSQL_USER")
     mysql_password: str | None = Field(default=None, validation_alias="MYSQL_PASSWORD")
     mysql_database: str | None = Field(default=None, validation_alias="MYSQL_DATABASE")
-    ragflow_api_key: str | None = Field(default=None, validation_alias="RAGFLOW_API_KEY")
-    ragflow_api_url: str | None = Field(default=None, validation_alias="RAGFLOW_API_URL")
 
     cors_origins: list[str] = Field(default_factory=lambda: ["*"], validation_alias="CORS_ORIGINS")
     upload_max_files: int = Field(default=10, validation_alias="UPLOAD_MAX_FILES")
@@ -73,8 +71,6 @@ class Settings(BaseSettings):
             "zhihu_configured": bool(self.zhihu_access_secret),
             "mysql_configured": bool(self.mysql_user and self.mysql_password and self.mysql_database),
             "mysql_host": self.mysql_host,
-            "ragflow_configured": bool(self.ragflow_api_key and self.ragflow_api_url),
-            "ragflow_endpoint_host": _hostname(self.ragflow_api_url),
         }
 
 

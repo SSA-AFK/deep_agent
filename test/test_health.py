@@ -13,6 +13,7 @@ def test_unconfigured_model_blocks_health(monkeypatch):
 
     assert result["overall"] == "blocked"
     assert result["services"]["llm"]["status"] == "unavailable"
+    assert "ragflow" not in result["services"]
 
 
 def test_health_result_is_cached(monkeypatch):

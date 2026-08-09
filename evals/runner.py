@@ -100,7 +100,6 @@ async def execute_live_case(case: EvalCase, prompt_version: str, timeout_seconds
     from tools.db_tools import execute_sql_query, get_table_data, list_sql_tables
     from tools.markdown_tools import generate_markdown
     from tools.pdf_tools import convert_md_to_pdf
-    from tools.ragflow_tools import create_ask_delete, get_assistant_list
     from tools.upload_file_read_tool import read_file_content
     from tools.zhihu_search_tool import internet_search
 
@@ -109,11 +108,11 @@ async def execute_live_case(case: EvalCase, prompt_version: str, timeout_seconds
     tools_by_role = {
         "zhihu": [internet_search],
         "db": [list_sql_tables, get_table_data, execute_sql_query],
-        "ragflow": [get_assistant_list, create_ask_delete],
     }
     subagents = [
         {"name": role, "description": config["description"], "system_prompt": config["system_prompt"], "tools": tools_by_role[role]}
         for role, config in prompts["sub_agents"].items()
+        if role in tools_by_role
     ]
     agent = create_deep_agent(
         model=get_model(),

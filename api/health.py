@@ -25,7 +25,6 @@ class ServiceRegistry:
             "llm": {"status": "unavailable" if model_error else "available", "mode": "required"},
             "zhihu": {"status": "available" if self.settings.zhihu_access_secret else "unavailable", "mode": "live" if self.settings.zhihu_access_secret else "demo"},
             "mysql": {"status": "configured" if self.settings.mysql_user else "unavailable", "mode": "demo"},
-            "ragflow": {"status": "configured" if self.settings.ragflow_api_key else "unavailable", "mode": "demo"},
             "word": {"status": "available", "mode": "local"},
         }
         result = {"overall": "blocked" if model_error else "ready", "services": services}

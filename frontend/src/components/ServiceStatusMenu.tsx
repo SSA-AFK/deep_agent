@@ -4,7 +4,7 @@ import { api } from "../api/client";
 import type { HealthResponse } from "../api/types";
 
 const labels: Record<string, string> = {
-  llm: "语言模型", zhihu: "知乎全网搜索", mysql: "产品数据", ragflow: "知识库", word: "文档导出",
+  llm: "语言模型", zhihu: "知乎全网搜索", mysql: "产品数据", word: "文档导出",
 };
 
 export function ServiceStatusMenu() {

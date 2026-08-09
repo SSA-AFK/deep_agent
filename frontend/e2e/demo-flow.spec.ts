@@ -4,7 +4,7 @@ test("research flow reaches a sourced report", async ({ page }) => {
   await page.route("**/*", async (route) => {
     const path = new URL(route.request().url()).pathname;
     if (!path.startsWith("/api/")) return route.continue();
-    if (path === "/api/health") return route.fulfill({ json: { overall: "ready", services: { llm: { status: "available", mode: "required" }, zhihu: { status: "available", mode: "live" }, mysql: { status: "unavailable", mode: "demo" }, ragflow: { status: "unavailable", mode: "demo" }, word: { status: "available", mode: "local" } } } });
+    if (path === "/api/health") return route.fulfill({ json: { overall: "ready", services: { llm: { status: "available", mode: "required" }, zhihu: { status: "available", mode: "live" }, mysql: { status: "unavailable", mode: "demo" }, word: { status: "available", mode: "local" } } } });
     if (path === "/api/task") return route.fulfill({ json: { status: "waiting_confirmation", thread_id: "test-e2e" } });
     if (path === "/api/files") return route.fulfill({ json: { files: [] } });
     if (path.endsWith("/feedback") || path.endsWith("/export")) return route.fulfill({ json: { status: "recorded" } });

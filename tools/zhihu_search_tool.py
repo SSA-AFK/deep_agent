@@ -56,7 +56,9 @@ class ZhihuSearchClient:
                 payload = response.json()
             except (ValueError, TypeError):
                 return self._degraded("ZHIHU_INVALID_RESPONSE", "Zhihu search returned an invalid response.", started)
-            if not isinstance(payload, dict) or payload.get("Code") != 0 or not isinstance(payload.get("Data"), list):
+            data = payload.get("Data") if isinstance(payload, dict) else None
+            items = data.get("Items") if isinstance(data, dict) else data
+            if not isinstance(payload, dict) or payload.get("Code") != 0 or not isinstance(items, list):
                 return self._degraded("ZHIHU_API_ERROR", "Zhihu search returned no usable results.", started)
 
             return ToolResult(
@@ -64,7 +66,7 @@ class ZhihuSearchClient:
                 source="zhihu_global_search",
                 mode=DataMode.LIVE,
                 duration_ms=_duration_ms(started),
-                items=[_normalize(item) for item in payload["Data"] if isinstance(item, dict)],
+                items=[_normalize(item) for item in items if isinstance(item, dict)],
             )
 
         return self._degraded("ZHIHU_UPSTREAM_ERROR", "Zhihu search is temporarily unavailable.", started, retryable=True)

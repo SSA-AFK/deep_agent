@@ -19,8 +19,8 @@
 - `frontend/`：React + TypeScript 桌面研究工作台，通过 REST 创建/恢复任务，通过 WebSocket 接收过程事件。
 - `api/`：FastAPI 协议层、任务生命周期、健康检查、上传下载与版本化事件。
 - `agent/`：主协调 Agent、三个研究角色和惰性模型初始化。
-- `tools/`：知乎全网搜索、只读 MySQL、RAGFlow、附件读取与文档生成；外部服务不可用时可透明返回 demo 数据。
-- `evals/`：30 条评测样本、V1/V2 Prompt 快照、自动评分与报告生成。
+- `tools/`：知乎全网搜索、只读 MySQL、附件读取与文档生成；外部服务不可用时可透明返回 demo 数据。
+- `evals/`：24 条当前评测样本、历史 V1/V2 Prompt 快照、自动评分与报告生成。
 - `analytics/`：不记录 Prompt 或文件内容的产品事件契约与离线漏斗分析。
 
 ## 当前证据
@@ -28,8 +28,8 @@
 - 后端：61 个自动化测试通过，包括模型兼容、路径边界、上传限制、只读 SQL、服务降级、任务状态、事件恢复、真实评测执行边界和离线端到端链路。
 - 前端：3 个 Vitest 测试、生产构建和 1 条 Playwright 完整浏览器流程通过。
 - 真实基础链路：Swagger/OpenAPI、任务创建与快照、WebSocket 中文 `ping/pong` 已在本地服务验证。
-- 知乎搜索与 Word COM 转 PDF 曾真实验证成功；MySQL 和 RAGFlow 当前以明确标记的 demo 数据降级。
-- DeepSeek V4 Flash 已完成真实连通、V1/V2 各 30 例评测及同一固定任务三次 API 成功验证：V2 的完成率为 80.0%（V1 为 26.7%）；但当前知乎未配置、MySQL/RAGFlow 仍为透明 demo 降级，不能据此声称引用或事实正确性提升。详见 [评测报告](docs/interview/evaluation-report.md)。
+- 知乎搜索与 Word COM 转 PDF 曾真实验证成功；MySQL 当前以明确标记的 demo 数据降级。RAGFlow 已从项目移除。
+- DeepSeek V4 Flash 已完成真实连通、V1/V2 各 30 例评测及同一固定任务三次 API 成功验证：V2 的完成率为 80.0%（V1 为 26.7%）；历史评测发生在移除 RAGFlow 前，当前评测集为 24 条。详见 [评测报告](docs/interview/evaluation-report.md)。
 
 ## 本地运行
 

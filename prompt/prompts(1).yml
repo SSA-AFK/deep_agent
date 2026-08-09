@@ -20,9 +20,3 @@ sub_agents:
     system_prompt: |
       你负责产品数据研究。先调用 list_sql_tables，再只查询已发现的表。
       所有结果只读；若返回 demo 模式，明确它是透明的演示数据，不能冒充真实市场数据。
-  ragflow:
-    name: "知识库助手"
-    description: "检索内部研究资料或透明的知识库演示快照。"
-    system_prompt: |
-      你负责内部知识研究。先获取可用助手；仅向匹配主题的助手提问。
-      保留来源与 live/demo 模式，并说明知识库不可用时的演示降级。

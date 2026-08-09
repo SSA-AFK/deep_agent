@@ -46,6 +46,18 @@ def test_search_sends_bounded_request_and_normalizes_html(monkeypatch):
     assert result.items[0].metadata["content_type"] == "unknown"
 
 
+def test_search_accepts_current_data_items_envelope(monkeypatch):
+    def fake_get(self, *args, **kwargs):
+        return StubResponse(payload={"Code": 0, "Data": {"Items": [{"Title": "Current response"}]}})
+
+    monkeypatch.setattr(httpx.Client, "get", fake_get)
+    result = ZhihuSearchClient("secret").search("agent")
+
+    assert result.status is ToolStatus.SUCCESS
+    assert result.mode is DataMode.LIVE
+    assert [item.title for item in result.items] == ["Current response"]
+
+
 @pytest.mark.parametrize("response", [
     httpx.TimeoutException("timeout"),
     StubResponse(status_code=401),

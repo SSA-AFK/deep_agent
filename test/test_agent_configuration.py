@@ -6,7 +6,7 @@ def test_prompts_use_consistent_research_scenario(capsys):
     importlib.reload(prompts)
 
     rendered = str(prompts.prompt_yaml_content)
-    assert set(prompts.sub_agents_content) == {"zhihu", "db", "ragflow"}
+    assert set(prompts.sub_agents_content) == {"zhihu", "db"}
     assert "空调" not in rendered
     assert "药品" not in rendered
     assert "知乎" in rendered

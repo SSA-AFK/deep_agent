@@ -49,7 +49,7 @@
 4. 调用方通过 `POST /api/task` 提交任务。
 5. 后端创建 `output/session_{thread_id}/` 并复制上传文件。
 6. `run_deep_agent()` 设置会话目录与线程上下文。
-7. 主 Agent 根据 Prompt 调用网络搜索、数据库或 RAGFlow 子 Agent。
+7. 主 Agent 根据 Prompt 调用网络搜索或数据库子 Agent。
 8. 主 Agent 汇总结果，并可调用文件工具生成 Markdown/PDF。
 9. `ToolMonitor` 通过 WebSocket 推送工具调用、子 Agent 和最终结果。
 10. 任务结束后重置 `ContextVar`。
@@ -62,9 +62,8 @@
 agent/       主 Agent、子 Agent、模型和 Prompt 加载
 api/         FastAPI、WebSocket、会话上下文和过程事件
 prompt/      主/子 Agent 的 YAML Prompt 配置
-tools/       MySQL、Tavily、RAGFlow、文件读取与文档生成工具
+tools/       MySQL、知乎搜索、文件读取与文档生成工具
 utils/       路径解析和 Word/PDF 转换等复用实现
-rawflow/     RAGFlow 示例与实验代码，不属于生产主链路
 test/        测试目录；当前 test_01.py 为空
 updated/     用户上传的运行时文件
 output/      Agent 生成的运行时文件
@@ -77,7 +76,6 @@ output/      Agent 生成的运行时文件
 - `tools/` 负责外部能力，必须自行处理参数校验、权限、超时和结构化错误。
 - `utils/` 不应包含业务状态和外部服务编排。
 - `prompt/prompts.yml` 是 Agent 行为配置来源；修改时必须同步评测用例。
-- `rawflow/` 中的代码不得被生产入口隐式调用。
 - `output/`、`updated/`、`.venv/` 和缓存目录不属于源码。
 
 ## 5. 核心文件
@@ -91,7 +89,6 @@ output/      Agent 生成的运行时文件
 - `prompt/prompts.yml`：主/子 Agent 的角色和策略。
 - `tools/db_tools.py`：MySQL 工具。
 - `tools/tavily_tool.py`：公开网络搜索工具。
-- `tools/ragflow_tools.py`：内部知识库工具。
 - `tools/upload_file_read_tool.py`：上传文件读取。
 - `tools/markdown_tools.py`：Markdown 生成。
 - `tools/pdf_tools.py`、`utils/word_converter.py`：Markdown 转 PDF。
@@ -126,7 +123,6 @@ PDF 转换依赖 Windows、Microsoft Word 和 COM。仅安装 Python 依赖不�
 - `ZHIHU_ACCESS_SECRET`
 - `TAVILY_API_KEY`（遗留 Tavily 工具使用；面试版将由知乎全网搜索替换）
 - `MYSQL_HOST`、`MYSQL_PORT`、`MYSQL_USER`、`MYSQL_PASSWORD`、`MYSQL_DATABASE`
-- `RAGFLOW_API_KEY`、`RAGFLOW_API_URL`
 
 ## 7. 当前验证基线
 
@@ -138,12 +134,12 @@ PDF 转换依赖 Windows、Microsoft Word 和 COM。仅安装 Python 依赖不�
 - `requirements.txt` 可在 Python 3.13 的 `.venv` 中完成安装。
 - `.venv` 中 `pip check` 返回无依赖冲突。
 - Python 源码可完成语法编译。
-- FastAPI、DeepAgents、LangChain/LangGraph、MySQL、RAGFlow、文档相关包可导入。
+- FastAPI、DeepAgents、LangChain/LangGraph、MySQL、文档相关包可导入。
 - `api.server` 可导入并创建名为 `DeepAgents API` 的 FastAPI 应用。
 - 项目已初始化 Git，当前分支为 `main`。
-- 后端自动化测试基线为 62 条，覆盖设置、模型兼容、契约、知乎搜索、健康检查、路径与上传安全、只读 SQL、RAGFlow 降级、任务生命周期、真实评测执行边界、埋点与离线端到端流程。
+- 后端自动化测试基线为 62 条，覆盖设置、模型兼容、契约、知乎搜索、健康检查、路径与上传安全、只读 SQL、任务生命周期、真实评测执行边界、埋点与离线端到端流程。
 - 前端具有 React/TypeScript 桌面工作台、Vitest 组件/状态测试、生产构建和 Playwright 浏览器流程。
-- 评测目录包含 30 条固定样本和 V1/V2 Prompt 快照；两版均已在 DeepSeek V4 Flash、相同 90 秒超时和相同外部服务状态下真实运行 30 条，脱敏聚合结果见 `docs/interview/evaluation-report.md`。
+- 当前评测目录包含 24 条固定样本；移除前的 V1/V2 各 30 条运行仅作为历史基线，脱敏聚合结果见 `docs/interview/evaluation-report.md`。
 
 进一步实测已确认：
 
@@ -151,6 +147,7 @@ PDF 转换依赖 Windows、Microsoft Word 和 COM。仅安装 Python 依赖不�
 - WebSocket 可建立连接并完成中文 `ping/pong`。
 - 文件上传可保存到对应会话目录。
 - 知乎开放平台全网搜索 API 真实请求返回 HTTP 200、API Code 0 和有效内容。
+- 本次配置后，知乎搜索工具实际返回 `success/live` 与 3 条结果；已兼容当前 API 的 `Data.Items` 响应信封。
 - Word COM 可完成 Markdown 到 PDF 转换。
 - 真实服务可创建等待确认的任务、读取恢复快照，并通过版本化事件管理任务状态。
 - 确定性离线端到端流程已覆盖任务创建、计划确认、WebSocket、终态结果、反馈、文件列表、PDF 下载和导出埋点。
@@ -159,10 +156,9 @@ PDF 转换依赖 Windows、Microsoft Word 和 COM。仅安装 Python 依赖不�
 
 当前未通过或处于阻塞状态：
 
-- MySQL 返回 1045 `Access denied`，面试版先使用透明 demo 降级。
-- RAGFlow 服务地址返回 502，面试版先使用透明 demo 降级。
+- MySQL 返回 1045 `Access denied`，面试版先使用透明 demo 降级；不得使用截图中的密码或在项目中记录它。
 - Windows GBK 控制台 Unicode 输出问题已改为 ASCII 安全日志，并有回归覆盖。
-- 当前环境未配置知乎凭据，网络研究会透明降级；因此 V1/V2 的 URL 型引用指标均为 0，不能把自动评分等同于事实正确或引用完整性。
+- 当前环境已配置知乎凭据，需在本次移除后的全链路验证中确认真实搜索结果；历史 V1/V2 在知乎未配置时运行，其 URL 型引用指标为 0，不能把自动评分等同于事实正确或引用完整性。
 - 人工盲评尚未执行；不得把自动评分描述为人工评审结论。
 
 不得把“模块可导入”描述成“项目端到端可运行”。每次更新通过状态时必须附有当次实际执行命令和结果。
@@ -268,7 +264,8 @@ PDF 转换依赖 Windows、Microsoft Word 和 COM。仅安装 Python 依赖不�
 | 日期 | 变化 | 验证 |
 | --- | --- | --- |
 | 2026-08-08 | 创建项目级 `AGENTS.md`，确立 Coze 面试目标、项目边界、安全规则和验证基线 | 对照当前仓库结构、`.venv`、Git 状态和既有项目调研记录 |
-| 2026-08-08 | 批准 Coze 面试版设计；确定 ChatGPT 式桌面工作台、知乎全网搜索、真实服务优先与透明 demo 降级；将本文件设为唯一持续迭代文档 | 知乎 API 真实请求通过；FastAPI/WebSocket/上传/Word PDF 通过；模型、MySQL、RAGFlow 阻塞原因已定位 |
+| 2026-08-08 | 批准 Coze 面试版设计；确定 ChatGPT 式桌面工作台、知乎全网搜索、真实服务优先与透明 demo 降级；将本文件设为唯一持续迭代文档 | 知乎 API 真实请求通过；FastAPI/WebSocket/上传/Word PDF 通过；模型、MySQL 阻塞原因已定位 |
 | 2026-08-09 | `(1).env` 加载、DashScope 变量别名与模型优先级已兼容；Qwen3 候选优先于旧的 Qwen Max 候选 | `pytest` 58 条通过；`pip check` 和编译通过；切换后健康检查仍返回 `LLM_AUTH_FAILED`（HTTP 401），未输出任何密钥 |
 | 2026-08-09 | 接入 DeepSeek V4 Flash 并关闭该模型的 thinking 模式以兼容工具强制调用；完成 V1/V2 各 30 条真实评测与固定任务三次 API 验证 | DeepSeek 直连和工具调用通过；V1 完成 8/30，V2 完成 24/30；固定任务三次均 `succeeded`（70.0、12.3、8.2 秒）；详情见 `docs/interview/evaluation-report.md`，人工盲评仍未开始 |
 | 2026-08-09 | 将 `deepseek_api.env` 纳入本地配置加载名单 | 定向设置与模型兼容测试 8 条通过；安全摘要确认 DeepSeek V4 Flash 已配置，未输出凭据 |
+| 2026-08-09 | 按用户要求移除 RAGFlow 的生产接入、实验代码、配置与当前评测路由；修复知乎 API 的 `Data.Items` 响应兼容 | 删除范围限定在仓库内的 RAGFlow 模块和无引用实验文件；Python 62 条测试、依赖检查、编译、前端 3 条测试和生产构建通过；知乎真实工具调用返回 `success/live` |
