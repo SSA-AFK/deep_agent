@@ -32,6 +32,20 @@ def test_live_runner_uses_injected_executor_and_resumes(tmp_path):
     assert calls == [("n-2", "v1", 10)]
 
 
+def test_live_runner_records_timeout_and_continues(tmp_path):
+    cases = [EvalCase(id="n-3", category="network", prompt="x", expected_agents=["zhihu"], required_facts=["x"], forbidden_behavior=["y"], grading_notes="z")]
+    output = tmp_path / "timeout.jsonl"
+
+    async def execute(*_):
+        await asyncio.sleep(1)
+        raise AssertionError("unreachable")
+
+    runs = asyncio.run(run_live_cases(cases, "v2", output, 0.01, execute))
+    assert runs[0].completed is False
+    assert runs[0].error_code == "EVAL_TIMEOUT"
+    assert len(output.read_text(encoding="utf-8").splitlines()) == 1
+
+
 def test_versioned_prompt_snapshots_match_product_variants():
     root = Path(__file__).parents[1]
     v1 = yaml.safe_load((root / "evals/prompts/v1.yml").read_text(encoding="utf-8"))

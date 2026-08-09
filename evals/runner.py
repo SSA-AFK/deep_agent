@@ -5,12 +5,18 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import time
 from collections.abc import Awaitable, Callable
 from pathlib import Path
 
 from evals.schema import EvalCase, EvalRun
 
 LiveExecutor = Callable[[EvalCase, str, float], Awaitable[EvalRun]]
+EVALUATION_HARNESS_RULES = """
+这是一个受控评测运行。只调用与用户问题直接相关的研究角色；每个角色最多调用一次。
+获得足够证据或任一来源发生降级后，立即返回简洁结论，不要重复调度角色或工具。
+保留来源和 live/demo 模式，不展示私有思维过程。
+"""
 
 
 def load_cases(path: Path) -> list[EvalCase]:
@@ -20,11 +26,7 @@ def load_cases(path: Path) -> list[EvalCase]:
 def _finished_case_ids(output: Path) -> set[str]:
     if not output.exists():
         return set()
-    return {
-        record["case_id"]
-        for line in output.read_text(encoding="utf-8").splitlines()
-        if (record := json.loads(line)).get("completed") is True
-    }
+    return _recorded_case_ids(output)
 
 
 def _recorded_case_ids(output: Path) -> set[str]:
@@ -61,7 +63,27 @@ async def run_live_cases(
     for case in cases:
         if case.id in _finished_case_ids(output):
             continue
-        run = await asyncio.wait_for(execute(case, prompt_version, timeout_seconds), timeout=timeout_seconds)
+        started = time.perf_counter()
+        try:
+            run = await asyncio.wait_for(execute(case, prompt_version, timeout_seconds), timeout=timeout_seconds)
+        except asyncio.TimeoutError:
+            run = EvalRun(
+                case_id=case.id,
+                prompt_version=prompt_version,
+                completed=False,
+                duration_ms=int((time.perf_counter() - started) * 1000),
+                error_code="EVAL_TIMEOUT",
+                error_message="The evaluation case exceeded its execution timeout.",
+            )
+        except Exception:
+            run = EvalRun(
+                case_id=case.id,
+                prompt_version=prompt_version,
+                completed=False,
+                duration_ms=int((time.perf_counter() - started) * 1000),
+                error_code="EVAL_EXECUTION_FAILED",
+                error_message="The evaluation case could not complete.",
+            )
         _append_runs(output, [run])
         runs.append(run)
     return runs
@@ -95,7 +117,7 @@ async def execute_live_case(case: EvalCase, prompt_version: str, timeout_seconds
     ]
     agent = create_deep_agent(
         model=get_model(),
-        system_prompt=prompts["main_agent"]["system_prompt"],
+        system_prompt=prompts["main_agent"]["system_prompt"] + EVALUATION_HARNESS_RULES,
         tools=[generate_markdown, convert_md_to_pdf, read_file_content],
         checkpointer=InMemorySaver(),
         subagents=subagents,
@@ -103,7 +125,7 @@ async def execute_live_case(case: EvalCase, prompt_version: str, timeout_seconds
     started = time.perf_counter()
     result = await agent.ainvoke(
         {"messages": [{"role": "user", "content": case.prompt}]},
-        config={"configurable": {"thread_id": f"eval-{prompt_version}-{case.id}"}},
+        config={"recursion_limit": 16, "configurable": {"thread_id": f"eval-{prompt_version}-{case.id}"}},
     )
     duration_ms = int((time.perf_counter() - started) * 1000)
     messages = result.get("messages", [])

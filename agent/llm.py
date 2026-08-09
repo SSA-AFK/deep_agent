@@ -21,11 +21,16 @@ def get_model(settings: Settings | None = None):
 def _build_model(settings: Settings):
     if not settings.model_configured:
         raise RuntimeError("LLM is not configured")
+    options = {}
+    if settings.deepseek_api_key:
+        # DeepSeek V4 Flash cannot combine thinking mode with forced tool choice.
+        options["extra_body"] = {"thinking": {"type": "disabled"}}
     return init_chat_model(
         model=settings.active_model,
         model_provider="openai",
         api_key=settings.active_api_key,
         base_url=settings.active_base_url,
+        **options,
     )
 
 

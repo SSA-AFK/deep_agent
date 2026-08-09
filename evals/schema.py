@@ -44,6 +44,8 @@ class EvalRun(BaseModel):
     traces: list[AgentTrace] = Field(default_factory=list)
     answer: str = ""
     duration_ms: int = Field(ge=0)
+    error_code: str | None = None
+    error_message: str | None = None
 
 
 class GradeResult(BaseModel):
