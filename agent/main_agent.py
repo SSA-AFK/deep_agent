@@ -10,7 +10,7 @@ from tools.upload_file_read_tool import read_file_content
 
 from deepagents import create_deep_agent
 
-from agent.llm import model
+from agent.llm import get_model
 from agent.prompts import main_agent_content
 
 from api.monitor import monitor
@@ -23,17 +23,21 @@ from api.context import set_session_context, reset_session_context, set_thread_c
 
 from langchain_core.messages import AIMessage
 
-main_agent = create_deep_agent(
-   model = model,
-   system_prompt=main_agent_content['system_prompt'],
-   tools= [generate_markdown,convert_md_to_pdf,read_file_content],
-   checkpointer=InMemorySaver(),
-   subagents=[
-       database_query_agent,
-       network_search_agent,
-       knowledge_base_agent
-   ]
-)
+_main_agent = None
+
+
+def get_main_agent():
+    """Build the Agent only after model readiness is required by a task."""
+    global _main_agent
+    if _main_agent is None:
+        _main_agent = create_deep_agent(
+            model=get_model(),
+            system_prompt=main_agent_content['system_prompt'],
+            tools=[generate_markdown, convert_md_to_pdf, read_file_content],
+            checkpointer=InMemorySaver(),
+            subagents=[database_query_agent, network_search_agent, knowledge_base_agent],
+        )
+    return _main_agent
 
 # 执行
 """
@@ -119,7 +123,7 @@ async def run_deep_agent(task_query,session_id):
     # 反馈结果
     try:
         # 执行
-        async for chunk in main_agent.astream({
+        async for chunk in get_main_agent().astream({
             "messages":[
                 {
                     "role":"user","content":task_query+path_instruction

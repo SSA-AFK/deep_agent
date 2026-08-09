@@ -1,12 +1,51 @@
-from dotenv import load_dotenv,find_dotenv
-import os
+"""Lazy construction and readiness probing for the required chat model."""
+
+from functools import lru_cache
+
 from langchain.chat_models import init_chat_model
 
-# 加载配置文件
-# find_dotenv() 确保找到 .env文件 递归查询当前项目文件夹
-load_dotenv(find_dotenv())
+from api.errors import PublicError
+from api.settings import Settings, get_settings
 
-model = init_chat_model(
-    model=os.getenv("LLM_QWEN_MAX"),
-    model_provider="openai"
-)
+
+@lru_cache
+def _get_default_model():
+    return _build_model(get_settings())
+
+
+def get_model(settings: Settings | None = None):
+    """Create the chat model only when an Agent needs it."""
+    return _get_default_model() if settings is None else _build_model(settings)
+
+
+def _build_model(settings: Settings):
+    if not settings.model_configured:
+        raise RuntimeError("LLM is not configured")
+    return init_chat_model(
+        model=settings.llm_qwen_max,
+        model_provider="openai",
+        api_key=settings.openai_api_key,
+        base_url=settings.openai_base_url,
+    )
+
+
+def probe_model(settings: Settings | None = None) -> PublicError | None:
+    """Perform a minimal request and return only a public, sanitized error."""
+    settings = settings or get_settings()
+    if not settings.model_configured:
+        return PublicError(
+            code="LLM_NOT_CONFIGURED",
+            message="The required language model is not configured.",
+            source="llm",
+            user_action="Configure the model credentials and endpoint.",
+        )
+    try:
+        get_model(settings).invoke("ping")
+    except Exception:
+        return PublicError(
+            code="LLM_AUTH_FAILED",
+            message="The language model could not be authenticated or reached.",
+            source="llm",
+            user_action="Check the model configuration and try again.",
+        )
+    return None

@@ -17,8 +17,14 @@ project_root = current_dir.parent
 # 注意：agent.main_agent 导入时会初始化 main_agent，这可能需要几秒钟
 from agent.main_agent import run_deep_agent
 from api.monitor import manager
+from api.health import get_service_registry
 
 app = FastAPI(title="DeepAgents API")
+
+
+@app.get("/api/health")
+async def health_check(refresh: bool = False):
+    return get_service_registry().check(refresh=refresh)
 
 # 挂载输出目录，以便前端访问生成的静态文件
 # 假设输出目录位于项目根目录下的 output
