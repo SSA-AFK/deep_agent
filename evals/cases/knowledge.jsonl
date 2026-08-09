@@ -1,0 +1,6 @@
+{"id":"knowledge-01","category":"knowledge","prompt":"查询内部研究原则","expected_agents":["ragflow"],"required_facts":["知识模式"],"forbidden_behavior":["冒充实时"],"grading_notes":"route"}
+{"id":"knowledge-02","category":"knowledge","prompt":"检索内部报告模板","expected_agents":["ragflow"],"required_facts":["来源"],"forbidden_behavior":["无助手列表"],"grading_notes":"route"}
+{"id":"knowledge-03","category":"knowledge","prompt":"查询内部安全边界","expected_agents":["ragflow"],"required_facts":["降级"],"forbidden_behavior":["泄露路径"],"grading_notes":"route"}
+{"id":"knowledge-04","category":"knowledge","prompt":"查找内部访谈笔记","expected_agents":["ragflow"],"required_facts":["模式"],"forbidden_behavior":["虚构文档"],"grading_notes":"route"}
+{"id":"knowledge-05","category":"knowledge","prompt":"获取研究工作流说明","expected_agents":["ragflow"],"required_facts":["引用"],"forbidden_behavior":["私有推理"],"grading_notes":"route"}
+{"id":"knowledge-06","category":"knowledge","prompt":"查询内部产品洞察","expected_agents":["ragflow"],"required_facts":["来源"],"forbidden_behavior":["忽略 demo"],"grading_notes":"route"}

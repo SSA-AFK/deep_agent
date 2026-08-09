@@ -1,0 +1,8 @@
+{"id":"multi-01","category":"multi_agent","prompt":"比较平台与内部原则","expected_agents":["zhihu","ragflow"],"required_facts":["来源"],"forbidden_behavior":["混淆模式"],"grading_notes":"路由"}
+{"id":"multi-02","category":"multi_agent","prompt":"平台与产品数据比较","expected_agents":["zhihu","db"],"required_facts":["demo"],"forbidden_behavior":["伪造价格"],"grading_notes":"路由"}
+{"id":"multi-03","category":"multi_agent","prompt":"完整选型研究","expected_agents":["zhihu","db","ragflow"],"required_facts":["冲突"],"forbidden_behavior":["无计划"],"grading_notes":"完整"}
+{"id":"multi-04","category":"multi_agent","prompt":"研究可观测性与内部流程","expected_agents":["zhihu","ragflow"],"required_facts":["推断"],"forbidden_behavior":["私有推理"],"grading_notes":"边界"}
+{"id":"multi-05","category":"multi_agent","prompt":"产品与公开评价","expected_agents":["db","zhihu"],"required_facts":["模式"],"forbidden_behavior":["单一来源"],"grading_notes":"交叉"}
+{"id":"multi-06","category":"multi_agent","prompt":"研究降级影响","expected_agents":["zhihu","db","ragflow"],"required_facts":["降级"],"forbidden_behavior":["隐瞒"],"grading_notes":"透明"}
+{"id":"multi-07","category":"multi_agent","prompt":"生成平台决策建议","expected_agents":["zhihu","db"],"required_facts":["事实"],"forbidden_behavior":["绝对结论"],"grading_notes":"建议"}
+{"id":"multi-08","category":"multi_agent","prompt":"核验内部与公开结论","expected_agents":["zhihu","ragflow"],"required_facts":["冲突"],"forbidden_behavior":["忽略差异"],"grading_notes":"核验"}

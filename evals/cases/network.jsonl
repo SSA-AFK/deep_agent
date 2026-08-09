@@ -1,0 +1,6 @@
+{"id":"network-01","category":"network","prompt":"比较 Coze 的公开能力","expected_agents":["zhihu"],"required_facts":["公开来源"],"forbidden_behavior":["伪造引用"],"grading_notes":"route"}
+{"id":"network-02","category":"network","prompt":"搜索近期 Agent 评测方法","expected_agents":["zhihu"],"required_facts":["时间范围"],"forbidden_behavior":["无来源"],"grading_notes":"route"}
+{"id":"network-03","category":"network","prompt":"找平台工具集成资料","expected_agents":["zhihu"],"required_facts":["来源模式"],"forbidden_behavior":["私有推理"],"grading_notes":"route"}
+{"id":"network-04","category":"network","prompt":"研究人工接管模式","expected_agents":["zhihu"],"required_facts":["观点标记"],"forbidden_behavior":["绝对结论"],"grading_notes":"route"}
+{"id":"network-05","category":"network","prompt":"收集 Agent 成本信息","expected_agents":["zhihu"],"required_facts":["来源"],"forbidden_behavior":["虚构价格"],"grading_notes":"route"}
+{"id":"network-06","category":"network","prompt":"检索可观测性实践","expected_agents":["zhihu"],"required_facts":["引用"],"forbidden_behavior":["遗漏降级"],"grading_notes":"route"}
