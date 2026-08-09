@@ -123,6 +123,7 @@ async def run_deep_agent(task_query,session_id):
     """
     # 反馈结果
     try:
+        final_result = None
         # 执行
         async for chunk in get_main_agent().astream({
             "messages":[
@@ -157,9 +158,10 @@ async def run_deep_agent(task_query,session_id):
                             # 最终结果
                             print(f"主智能体执行结果，最终结果：{last_msg.content[:100]}")
                             monitor.report_task_result(last_msg.content)
+                            final_result = last_msg.content
 
         try:
-            await task_manager.transition(session_id, TaskState.SUCCEEDED)
+            await task_manager.transition(session_id, TaskState.SUCCEEDED, {"result": final_result or ""})
         except (KeyError, ValueError):
             pass
 
@@ -167,7 +169,7 @@ async def run_deep_agent(task_query,session_id):
         # 报错推送错误信息给前端
         monitor._emit("error",f"执行主智能发生异常信息：{str(e)}")
         try:
-            await task_manager.transition(session_id, TaskState.FAILED)
+            await task_manager.transition(session_id, TaskState.FAILED, {"error": {"code": "AGENT_EXECUTION_FAILED", "message": "The research task failed.", "source": "agent", "retryable": True}})
         except (KeyError, ValueError):
             pass
     finally:

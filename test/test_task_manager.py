@@ -9,11 +9,12 @@ async def test_task_transitions_events_and_terminal_state():
     await manager.create("test-task", "research")
     await manager.transition("test-task", TaskState.WAITING_CONFIRMATION)
     await manager.transition("test-task", TaskState.RUNNING)
-    await manager.transition("test-task", TaskState.SUCCEEDED)
+    await manager.transition("test-task", TaskState.SUCCEEDED, {"result": "finished"})
 
     snapshot = await manager.snapshot("test-task")
     assert [event["sequence"] for event in snapshot["events"]] == [1, 2, 3, 4]
     assert snapshot["state"] == TaskState.SUCCEEDED
+    assert snapshot["result"] == "finished"
     with pytest.raises(ValueError):
         await manager.transition("test-task", TaskState.RUNNING)
 

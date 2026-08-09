@@ -65,6 +65,10 @@ class TaskManager:
             if task.state in _TERMINAL or state not in _ALLOWED.get(task.state, set()):
                 raise ValueError(f"Invalid transition: {task.state} -> {state}")
             task.state = state
+            if state is TaskState.SUCCEEDED and data and isinstance(data.get("result"), str):
+                task.result = data["result"]
+            if state is TaskState.FAILED and data and isinstance(data.get("error"), dict):
+                task.error = data["error"]
             self._emit(task, "task_status", {"state": state, **(data or {})})
             return task
 
