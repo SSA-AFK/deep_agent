@@ -4,6 +4,7 @@ import App from "./App";
 
 vi.mock("./api/client", () => ({ api: {
   createTask: vi.fn().mockResolvedValue({ thread_id: "test-1" }),
+  health: vi.fn().mockResolvedValue({ overall: "ready", services: {} }),
   upload: vi.fn().mockResolvedValue({ files: [] }),
   confirm: vi.fn().mockResolvedValue({}),
   feedback: vi.fn().mockResolvedValue({ status: "recorded" }),

@@ -1,13 +1,23 @@
 import { CircleAlert, CircleCheck, ServerCrash } from "lucide-react";
+import { useEffect, useState } from "react";
+import { api } from "../api/client";
+import type { HealthResponse } from "../api/types";
 
-type Service = { name: string; status: "available" | "unavailable"; mode: "live" | "demo" | "required" };
-const services: Service[] = [
-  { name: "语言模型", status: "available", mode: "required" },
-  { name: "知乎全网搜索", status: "available", mode: "live" },
-  { name: "产品数据", status: "unavailable", mode: "demo" },
-  { name: "知识库", status: "unavailable", mode: "demo" },
-];
+const labels: Record<string, string> = {
+  llm: "语言模型", zhihu: "知乎全网搜索", mysql: "产品数据", ragflow: "知识库", word: "文档导出",
+};
 
 export function ServiceStatusMenu() {
-  return <details className="service-status"><summary><CircleAlert size={15} /> 服务状态</summary><div>{services.map((service) => <p key={service.name}>{service.status === "available" ? <CircleCheck size={15} /> : <ServerCrash size={15} />}<span>{service.name}</span><small>{service.status === "available" ? service.mode : `已降级为 ${service.mode}`}</small></p>)}</div></details>;
+  const [health, setHealth] = useState<HealthResponse | null>(null);
+  useEffect(() => { api.health().then(setHealth).catch(() => setHealth(null)); }, []);
+  const entries = Object.entries(health?.services ?? {});
+  return <details className="service-status">
+    <summary><CircleAlert size={15} /> 服务状态</summary>
+    <div>
+      {entries.length === 0 ? <p><ServerCrash size={15} /><span>状态暂不可用</span><small>可重试</small></p> : entries.map(([key, service]) => {
+        const available = service.status === "available" || service.status === "configured";
+        return <p key={key}>{available ? <CircleCheck size={15} /> : <ServerCrash size={15} />}<span>{labels[key] ?? key}</span><small>{available ? service.mode : `已降级为 ${service.mode}`}</small></p>;
+      })}
+    </div>
+  </details>;
 }
