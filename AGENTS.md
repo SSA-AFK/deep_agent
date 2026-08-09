@@ -141,9 +141,9 @@ PDF 转换依赖 Windows、Microsoft Word 和 COM。仅安装 Python 依赖不�
 - FastAPI、DeepAgents、LangChain/LangGraph、MySQL、RAGFlow、文档相关包可导入。
 - `api.server` 可导入并创建名为 `DeepAgents API` 的 FastAPI 应用。
 - 项目已初始化 Git，当前分支为 `main`。
-- 后端自动化测试基线为 59 条，覆盖设置、契约、知乎搜索、健康检查、路径与上传安全、只读 SQL、RAGFlow 降级、任务生命周期、真实评测执行边界、埋点与离线端到端流程。
+- 后端自动化测试基线为 61 条，覆盖设置、模型兼容、契约、知乎搜索、健康检查、路径与上传安全、只读 SQL、RAGFlow 降级、任务生命周期、真实评测执行边界、埋点与离线端到端流程。
 - 前端具有 React/TypeScript 桌面工作台、Vitest 组件/状态测试、生产构建和 Playwright 浏览器流程。
-- 评测目录包含 30 条固定样本和与历史/当前配置逐字段一致的 V1/V2 Prompt 快照；当前没有可发布的真实 V1/V2 模型分数。
+- 评测目录包含 30 条固定样本和 V1/V2 Prompt 快照；两版均已在 DeepSeek V4 Flash、相同 90 秒超时和相同外部服务状态下真实运行 30 条，脱敏聚合结果见 `docs/interview/evaluation-report.md`。
 
 进一步实测已确认：
 
@@ -159,11 +159,11 @@ PDF 转换依赖 Windows、Microsoft Word 和 COM。仅安装 Python 依赖不�
 
 当前未通过或处于阻塞状态：
 
-- DashScope 模型返回 401 `invalid_api_key`，是 Agent 联调的硬阻塞。
 - MySQL 返回 1045 `Access denied`，面试版先使用透明 demo 降级。
 - RAGFlow 服务地址返回 502，面试版先使用透明 demo 降级。
 - Windows GBK 控制台 Unicode 输出问题已改为 ASCII 安全日志，并有回归覆盖。
-- 由于模型认证失败，30 条 V1/V2 真实运行、盲评和固定案例 3 次真实 Agent 成功验证尚未执行；报告必须继续显示“无实测分数”，不得把离线 fake/mock 结果描述为真实模型效果。
+- 当前环境未配置知乎凭据，网络研究会透明降级；因此 V1/V2 的 URL 型引用指标均为 0，不能把自动评分等同于事实正确或引用完整性。
+- 人工盲评尚未执行；不得把自动评分描述为人工评审结论。
 
 不得把“模块可导入”描述成“项目端到端可运行”。每次更新通过状态时必须附有当次实际执行命令和结果。
 
@@ -270,3 +270,4 @@ PDF 转换依赖 Windows、Microsoft Word 和 COM。仅安装 Python 依赖不�
 | 2026-08-08 | 创建项目级 `AGENTS.md`，确立 Coze 面试目标、项目边界、安全规则和验证基线 | 对照当前仓库结构、`.venv`、Git 状态和既有项目调研记录 |
 | 2026-08-08 | 批准 Coze 面试版设计；确定 ChatGPT 式桌面工作台、知乎全网搜索、真实服务优先与透明 demo 降级；将本文件设为唯一持续迭代文档 | 知乎 API 真实请求通过；FastAPI/WebSocket/上传/Word PDF 通过；模型、MySQL、RAGFlow 阻塞原因已定位 |
 | 2026-08-09 | `(1).env` 加载、DashScope 变量别名与模型优先级已兼容；Qwen3 候选优先于旧的 Qwen Max 候选 | `pytest` 58 条通过；`pip check` 和编译通过；切换后健康检查仍返回 `LLM_AUTH_FAILED`（HTTP 401），未输出任何密钥 |
+| 2026-08-09 | 接入 DeepSeek V4 Flash 并关闭该模型的 thinking 模式以兼容工具强制调用；完成 V1/V2 各 30 条真实评测与固定任务三次 API 验证 | DeepSeek 直连和工具调用通过；V1 完成 8/30，V2 完成 24/30；固定任务三次均 `succeeded`（70.0、12.3、8.2 秒）；详情见 `docs/interview/evaluation-report.md`，人工盲评仍未开始 |

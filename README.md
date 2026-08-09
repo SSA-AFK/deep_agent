@@ -25,11 +25,11 @@
 
 ## 当前证据
 
-- 后端：55 个自动化测试通过，包括路径边界、上传限制、只读 SQL、服务降级、任务状态、事件恢复、真实评测执行边界和离线端到端链路。
+- 后端：61 个自动化测试通过，包括模型兼容、路径边界、上传限制、只读 SQL、服务降级、任务状态、事件恢复、真实评测执行边界和离线端到端链路。
 - 前端：3 个 Vitest 测试、生产构建和 1 条 Playwright 完整浏览器流程通过。
 - 真实基础链路：Swagger/OpenAPI、任务创建与快照、WebSocket 中文 `ping/pong` 已在本地服务验证。
 - 知乎搜索与 Word COM 转 PDF 曾真实验证成功；MySQL 和 RAGFlow 当前以明确标记的 demo 数据降级。
-- 当前模型凭据被服务商返回 401，因此没有伪造 V1/V2 的 30 例线上分数或 3 次真实 Agent 成功率。详见 [评测报告](docs/interview/evaluation-report.md)。
+- DeepSeek V4 Flash 已完成真实连通、V1/V2 各 30 例评测及同一固定任务三次 API 成功验证：V2 的完成率为 80.0%（V1 为 26.7%）；但当前知乎未配置、MySQL/RAGFlow 仍为透明 demo 降级，不能据此声称引用或事实正确性提升。详见 [评测报告](docs/interview/evaluation-report.md)。
 
 ## 本地运行
 
