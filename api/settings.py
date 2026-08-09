@@ -3,17 +3,23 @@
 from functools import lru_cache
 from urllib.parse import urlparse
 
-from pydantic import Field
+from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
     """Runtime settings loaded from environment variables or the local `.env` file."""
 
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore", populate_by_name=True)
+    model_config = SettingsConfigDict(env_file=(".env", "(1).env"), extra="ignore", populate_by_name=True)
 
+    llm_model: str | None = Field(default=None, validation_alias="LLM_MODEL")
+    llm_qwen_3: str | None = Field(default=None, validation_alias="LLM_QWEN3")
     llm_qwen_max: str | None = Field(default=None, validation_alias="LLM_QWEN_MAX")
-    openai_api_key: str | None = Field(default=None, validation_alias="OPENAI_API_KEY")
+    llm_qwen_2_5: str | None = Field(default=None, validation_alias="LLM_QWEN2.5")
+    openai_api_key: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("OPENAI_API_KEY", "DASHSCOPE_API_KEY"),
+    )
     openai_base_url: str | None = Field(default=None, validation_alias="OPENAI_BASE_URL")
     zhihu_access_secret: str | None = Field(default=None, validation_alias="ZHIHU_ACCESS_SECRET")
 
@@ -36,13 +42,18 @@ class Settings(BaseSettings):
 
     @property
     def model_configured(self) -> bool:
-        return bool(self.llm_qwen_max and self.openai_api_key and self.openai_base_url)
+        return bool(self.active_model and self.openai_api_key and self.openai_base_url)
+
+    @property
+    def active_model(self) -> str | None:
+        """Prefer an explicit choice, then the newer configured Qwen candidate."""
+        return self.llm_model or self.llm_qwen_3 or self.llm_qwen_max or self.llm_qwen_2_5
 
     def public_summary(self) -> dict[str, object]:
         """Return configuration state without including credentials or full URLs."""
         return {
             "model_configured": self.model_configured,
-            "model_name_configured": bool(self.llm_qwen_max),
+            "model_name_configured": bool(self.active_model),
             "openai_endpoint_host": _hostname(self.openai_base_url),
             "zhihu_configured": bool(self.zhihu_access_secret),
             "mysql_configured": bool(self.mysql_user and self.mysql_password and self.mysql_database),

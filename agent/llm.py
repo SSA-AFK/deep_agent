@@ -22,7 +22,7 @@ def _build_model(settings: Settings):
     if not settings.model_configured:
         raise RuntimeError("LLM is not configured")
     return init_chat_model(
-        model=settings.llm_qwen_max,
+        model=settings.active_model,
         model_provider="openai",
         api_key=settings.openai_api_key,
         base_url=settings.openai_base_url,

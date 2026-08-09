@@ -48,7 +48,7 @@ npm ci
 npm run dev
 ```
 
-模型和外部服务通过环境变量配置。只记录变量名，不要把值写入日志或提交：`LLM_QWEN_MAX`、`OPENAI_API_KEY`、`OPENAI_BASE_URL`、`ZHIHU_ACCESS_SECRET`、MySQL 与 RAGFlow 相关变量。
+模型和外部服务通过环境变量配置。只记录变量名，不要把值写入日志或提交：`LLM_MODEL`（显式优先）或 `LLM_QWEN3`、`LLM_QWEN_MAX`、`OPENAI_API_KEY`（也兼容 `DASHSCOPE_API_KEY`）、`OPENAI_BASE_URL`、`ZHIHU_ACCESS_SECRET`、MySQL 与 RAGFlow 相关变量。
 
 ## 验证
 
