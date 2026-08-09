@@ -24,3 +24,18 @@ async def test_task_manager_rejects_duplicate_ids():
     await manager.create("test-task", "research")
     with pytest.raises(ValueError):
         await manager.create("test-task", "other")
+
+
+@pytest.mark.asyncio
+async def test_task_manager_broadcasts_versioned_events():
+    manager = TaskManager()
+    delivered = []
+    manager.subscribe(lambda event: _capture(delivered, event))
+    await manager.create("test-events", "research")
+    await __import__("asyncio").sleep(0)
+    assert delivered[0]["version"] == 1
+    assert delivered[0]["thread_id"] == "test-events"
+
+
+async def _capture(delivered, event):
+    delivered.append(event)

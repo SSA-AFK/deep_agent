@@ -7,6 +7,7 @@ from collections import deque
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import StrEnum
+from collections.abc import Awaitable, Callable
 from typing import Any
 
 
@@ -43,6 +44,11 @@ class TaskManager:
     def __init__(self) -> None:
         self._tasks: dict[str, ManagedTask] = {}
         self._lock = asyncio.Lock()
+        self._listeners: list[Callable[[dict[str, Any]], Awaitable[None]]] = []
+
+    def subscribe(self, listener: Callable[[dict[str, Any]], Awaitable[None]]) -> None:
+        if listener not in self._listeners:
+            self._listeners.append(listener)
 
     async def create(self, thread_id: str, query: str) -> ManagedTask:
         async with self._lock:
@@ -78,10 +84,12 @@ class TaskManager:
             raise KeyError(thread_id)
         return self._tasks[thread_id]
 
-    @staticmethod
-    def _emit(task: ManagedTask, event_type: str, data: dict[str, Any]) -> None:
+    def _emit(self, task: ManagedTask, event_type: str, data: dict[str, Any]) -> None:
         task.sequence += 1
-        task.events.append({"version": 1, "sequence": task.sequence, "type": event_type, "thread_id": task.thread_id, "timestamp": datetime.now(timezone.utc).isoformat(), "data": data})
+        event = {"version": 1, "sequence": task.sequence, "type": event_type, "thread_id": task.thread_id, "timestamp": datetime.now(timezone.utc).isoformat(), "data": data}
+        task.events.append(event)
+        for listener in self._listeners:
+            asyncio.create_task(listener(event))
 
 
 task_manager = TaskManager()

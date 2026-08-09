@@ -64,6 +64,7 @@ async def startup_event():
     """
     loop = asyncio.get_running_loop()
     manager.set_loop(loop)
+    task_manager.subscribe(lambda event: manager.send_to_thread(event, event["thread_id"]))
     print(f"[Server] WebSocket Manager bound to loop: {id(loop)}")
 
 
