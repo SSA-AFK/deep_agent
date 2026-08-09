@@ -8,4 +8,6 @@ test("renders product name and submits a research question", () => {
   fireEvent.change(screen.getByLabelText("研究问题"), { target: { value: "测试研究" } });
   fireEvent.click(screen.getByLabelText("提交研究"));
   expect(screen.getByText("测试研究", { selector: "article p" })).toBeInTheDocument();
+  fireEvent.click(screen.getByText("确认并开始"));
+  expect(screen.getByText("研究已启动")).toBeInTheDocument();
 });
