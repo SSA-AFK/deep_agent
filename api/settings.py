@@ -28,6 +28,10 @@ class Settings(BaseSettings):
     cors_origins: list[str] = Field(default_factory=lambda: ["*"], validation_alias="CORS_ORIGINS")
     upload_max_files: int = Field(default=10, validation_alias="UPLOAD_MAX_FILES")
     upload_max_bytes: int = Field(default=20 * 1024 * 1024, validation_alias="UPLOAD_MAX_BYTES")
+    upload_allowed_extensions: list[str] = Field(
+        default_factory=lambda: [".txt", ".md", ".pdf", ".docx", ".csv", ".xlsx"],
+        validation_alias="UPLOAD_ALLOWED_EXTENSIONS",
+    )
     request_timeout_seconds: float = Field(default=10.0, validation_alias="REQUEST_TIMEOUT_SECONDS")
 
     @property

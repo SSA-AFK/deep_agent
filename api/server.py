@@ -2,7 +2,7 @@ import uuid
 import asyncio
 import uvicorn
 from pathlib import Path
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, UploadFile, File, Form
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, UploadFile, File, Form
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -18,6 +18,7 @@ project_root = current_dir.parent
 from agent.main_agent import run_deep_agent
 from api.monitor import manager
 from api.health import get_service_registry
+from api.settings import get_settings
 
 app = FastAPI(title="DeepAgents API")
 
@@ -85,6 +86,11 @@ async def upload_files(files: List[UploadFile] = File(...), thread_id: str = For
         files (List[UploadFile]): 文件对象列表。
         thread_id (str): 关联的任务会话 ID。
     """
+    _validate_thread_id(thread_id)
+    settings = get_settings()
+    if len(files) > settings.upload_max_files:
+        raise HTTPException(status_code=413, detail="Too many uploaded files.")
+
     # 1. [目录准备] 确保上传目录存在
     target_dir = updated_dir / f"session_{thread_id}"
     target_dir.mkdir(parents=True, exist_ok=True)
@@ -92,15 +98,28 @@ async def upload_files(files: List[UploadFile] = File(...), thread_id: str = For
     saved_files = []
     # 2. [保存] 遍历并写入文件
     for file in files:
-        file_path = target_dir / file.filename
-        # 使用二进制模式写入，支持各种文件格式 (图片、PDF、文本等)
-        # shutil.copyfileobj 高效复制文件流，避免一次性加载大文件到内存
-        with file_path.open("wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
-        saved_files.append(file.filename)
+        filename = file.filename or ""
+        basename = Path(filename).name
+        if basename != filename or "/" in filename or "\\" in filename or "%2f" in filename.lower() or "%5c" in filename.lower():
+            raise HTTPException(status_code=422, detail="Invalid filename.")
+        if Path(basename).suffix.lower() not in settings.upload_allowed_extensions:
+            raise HTTPException(status_code=415, detail="Unsupported file type.")
+        content = await file.read(settings.upload_max_bytes + 1)
+        if len(content) > settings.upload_max_bytes:
+            raise HTTPException(status_code=413, detail="Uploaded file is too large.")
+        (target_dir / basename).write_bytes(content)
+        saved_files.append(basename)
 
     # 3. [响应] 返回成功保存的文件列表
     return {"status": "uploaded", "files": saved_files}
+
+
+def _validate_thread_id(thread_id: str) -> None:
+    try:
+        uuid.UUID(thread_id)
+    except (ValueError, AttributeError):
+        if not thread_id.startswith("test-") or not thread_id[5:].replace("-", "").isalnum():
+            raise HTTPException(status_code=422, detail="Invalid thread ID.")
 
 
 @app.get("/api/download")
