@@ -1,0 +1,4 @@
+[
+  {"id": "agent-starter", "name": "Agent Starter", "platform": "Coze", "monthly_price": 0, "best_for": "快速验证单一 Agent 工作流"},
+  {"id": "agent-research", "name": "Research Workbench", "platform": "Demo", "monthly_price": 99, "best_for": "需要来源追溯的复杂研究任务"}
+]
