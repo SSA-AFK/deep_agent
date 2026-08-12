@@ -126,7 +126,7 @@ PDF 转换依赖 Windows、Microsoft Word 和 COM。仅安装 Python 依赖不�
 
 ## 7. 当前验证基线
 
-最后更新：2026-08-09。
+最后更新：2026-08-12。
 
 已确认：
 
@@ -137,8 +137,8 @@ PDF 转换依赖 Windows、Microsoft Word 和 COM。仅安装 Python 依赖不�
 - FastAPI、DeepAgents、LangChain/LangGraph、MySQL、文档相关包可导入。
 - `api.server` 可导入并创建名为 `DeepAgents API` 的 FastAPI 应用。
 - 项目已初始化 Git，当前分支为 `main`。
-- 后端自动化测试基线为 68 条，覆盖设置、模型兼容、引用保留、契约、知乎搜索、健康检查、路径与上传安全、只读 SQL、任务生命周期、真实评测执行边界、埋点与离线端到端流程。
-- 前端具有 React/TypeScript 桌面工作台、Vitest 组件/状态测试、生产构建和 Playwright 浏览器流程。
+- 后端自动化测试基线为 71 条，覆盖设置、模型路由隔离（DeepSeek thinking 参数仅对 DeepSeek 路由生效、显式 `LLM_MODEL=qwen3.8-max` 通过 DashScope 不被污染）、引用保留、契约、知乎搜索（含单线程单次检索护栏）、健康检查、路径与上传安全、只读 SQL、任务生命周期、真实评测执行边界、埋点与离线端到端流程。
+- 前端具有 React/TypeScript 桌面工作台、Vitest 19 条组件/状态测试、生产构建和 Playwright 浏览器流程。
 - 当前评测目录包含 24 条固定样本；移除前的 V1/V2 各 30 条运行仅作为历史基线，脱敏聚合结果见 `docs/interview/evaluation-report.md`。
 
 进一步实测已确认：
@@ -272,3 +272,5 @@ PDF 转换依赖 Windows、Microsoft Word 和 COM。仅安装 Python 依赖不�
 | 2026-08-09 | 按用户要求移除 RAGFlow 的生产接入、实验代码、配置与当前评测路由；修复知乎 API 的 `Data.Items` 响应兼容 | 删除范围限定在仓库内的 RAGFlow 模块和无引用实验文件；Python 62 条测试、依赖检查、编译、前端 3 条测试和生产构建通过；知乎真实工具调用返回 `success/live` |
 | 2026-08-09 | 统一面试材料、增加公开 URL 保留逻辑、生成 5 人可用性测试计划并完成移除 RAGFlow 后的 V3 评测 | V3 24 条真实样本完成率 58.3%；引用逻辑单元测试通过，端到端中文复测超时，详见 `docs/interview/evaluation-report.md` |
 | 2026-08-09 | 为公开研究任务增加一次调度限制与 45 秒透明超时降级 | 同一中文任务在 48.6 秒进入 `succeeded`，返回真实 URL；不修改既有 V3 基线 |
+| 2026-08-12 | 改进空 `Monitor:error` 语义化提示；为 `internet_search` 增加单线程单次真实检索护栏（复用线程上下文而非 config 注入）；修复 `_emit` 中未 await 协程泄漏；放宽超时降级条件——模型已检索到公开 URL 时也降级返回而非直接失败 | 后端 69 条、前端 3 条与生产构建通过；普通任务（不含"来源"标记，此前必失败）42.2s 进入 `succeeded` 并返回真实检索结果；含来源任务保持稳定 |
+| 2026-08-12 | 切换 `LLM_MODEL=qwen3.8-max` 并修复 `_build_model` 路由隔离：显式模型走 DashScope/OpenAI 兼容端点时，不再因环境存在 `DEEPSEEK_API_KEY` 被错误注入 DeepSeek 特有的 `thinking: disabled` 请求体；新增 2 条模型路由隔离用例 | `pip check` 通过；`compileall` 通过；`pytest -q` 后端 71 条全部通过；`vitest run` 前端 19 条通过；`tsc -b && vite build` 生产构建成功（1714 个模块、214 KB JS / 16 KB CSS） |

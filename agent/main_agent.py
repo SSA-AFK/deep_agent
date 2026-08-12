@@ -14,6 +14,8 @@ from agent.prompts import main_agent_content
 
 from api.monitor import monitor
 import asyncio
+import json
+import re
 import uuid
 import shutil
 from pathlib import Path
@@ -24,7 +26,7 @@ from utils.citations import append_source_links
 from utils.citations import requests_public_sources
 from utils.citations import render_public_source_fallback
 
-from langchain_core.messages import AIMessage
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
 _main_agent = None
 
@@ -129,6 +131,7 @@ async def run_deep_agent(task_query,session_id):
     try:
         final_result = None
         message_contents = []
+        emitted_text_len = 0  # 已经通过 report_delta 推给前端的累积文本长度，用于算 diff
         # 执行
         try:
             async with asyncio.timeout(45):
@@ -151,13 +154,21 @@ async def run_deep_agent(task_query,session_id):
                                     if tool_call['name'] == 'task':
                                         monitor.report_assistant(tool_call['args']['subagent_type'], {'description': tool_call['args']['description']})
                             elif last_msg.content:
-                                print(f"主智能体执行结果，最终结果：{last_msg.content[:100]}")
-                                final_result = last_msg.content
+                                content = last_msg.content if isinstance(last_msg.content, str) else ""
+                                if content:
+                                    final_result = content
+                                    if len(content) > emitted_text_len:
+                                        delta = content[emitted_text_len:]
+                                        emitted_text_len = len(content)
+                                        monitor.report_delta(delta, partial=content)
         except TimeoutError:
-            if not requests_public_sources(task_query):
-                raise
             from api.settings import get_settings
             from tools.zhihu_search_tool import ZhihuSearchClient
+
+            # 模型超时未必代表没结果：若已检索到公开来源，或 query 明确要求来源，
+            # 则降级返回可直接核验的检索结果，避免无谓失败。
+            if not (requests_public_sources(task_query) or monitor.peek_source_urls(session_id)):
+                raise
 
             search_result = ZhihuSearchClient(
                 get_settings().zhihu_access_secret,
@@ -168,6 +179,11 @@ async def run_deep_agent(task_query,session_id):
                 for item in search_result.items
                 if item.url
             ])
+            # 超时降级也按增量推送（从头发，emitted_text_len 此时一般为 0）
+            if len(final_result) > emitted_text_len:
+                delta = final_result[emitted_text_len:]
+                emitted_text_len = len(final_result)
+                monitor.report_delta(delta, partial=final_result)
             message_contents = []
 
         source_urls = monitor.take_source_urls(session_id)
@@ -181,6 +197,10 @@ async def run_deep_agent(task_query,session_id):
             ).search(task_query, count=3)
             source_urls = [item.url for item in search_result.items if item.url]
         final_result = append_source_links(final_result or "", message_contents + source_urls)
+        # 追加来源后的最终文本与上次推送的差值，再推一次 delta 保证正文流末尾就是最终展示内容
+        if len(final_result) > emitted_text_len:
+            delta = final_result[emitted_text_len:]
+            monitor.report_delta(delta, partial=final_result)
         monitor.report_task_result(final_result)
 
         try:
@@ -190,13 +210,151 @@ async def run_deep_agent(task_query,session_id):
 
     except Exception as e :
         # 报错推送错误信息给前端
-        monitor._emit("error",f"执行主智能发生异常信息：{str(e)}")
+        # asyncio.TimeoutError 等异常 str(e) 可能为空，此时给出可读的语义化提示，便于前端展示与排查
+        detail = str(e).strip()
+        if not detail:
+            if isinstance(e, TimeoutError):
+                detail = "任务在 45 秒时间内未完成，已终止执行。"
+            else:
+                detail = "任务执行失败，未返回可读的错误详情。"
+        monitor._emit("error", f"执行主智能发生异常信息：{detail}")
         try:
             await task_manager.transition(session_id, TaskState.FAILED, {"error": {"code": "AGENT_EXECUTION_FAILED", "message": "The research task failed.", "source": "agent", "retryable": True}})
         except (KeyError, ValueError):
             pass
     finally:
         monitor.take_source_urls(session_id)
+        monitor.clear_search_flag(session_id)
         # 释放存储的地址和session_id
         reset_session_context(session_dir_token, session_id_token)
+
+
+_QUICK_CHAT_PROMPT = (
+    "你是 Deep Search Pro 工作台内置的轻量助手，用来回答用户不需要公开检索或多步骤分析的简单问题。"
+    "回答须清晰、简洁、中文优先；不要编造事实，若问题涉及最新动态、实时数据、对比研究或专业报告，"
+    "请如实说明「建议使用「深度研究」模式以获得有来源、可核验的结论」。"
+)
+
+
+async def run_quick_chat(chat_query: str, session_id: str):
+    """Quick Chat 模式：直接调用单模型 astream，输出走同一套 delta/result WS 事件，任务走 task_manager 状态机。
+
+    对比 run_deep_agent：
+    - 不创建 output 工作目录、不读上传文件、不调用工具或子智能体
+    - 不做 45s 透明降级（聊天链路要低时延，超时失败直接在终端提示）
+    """
+    print(f"[quick_chat] start thread={session_id}")
+    thread_token = set_thread_context(session_id)
+    emitted_len = 0
+    final_text = ""
+    try:
+        async with asyncio.timeout(30):
+            async for chunk in get_model().astream(
+                [SystemMessage(content=_QUICK_CHAT_PROMPT), HumanMessage(content=chat_query)]
+            ):
+                content = chunk.content if isinstance(chunk.content, str) else ""
+                if not content:
+                    continue
+                final_text = final_text + content
+                if len(final_text) > emitted_len:
+                    delta = final_text[emitted_len:]
+                    emitted_len = len(final_text)
+                    monitor.report_delta(delta, partial=final_text)
+        monitor.report_task_result(final_text)
+        try:
+            await task_manager.transition(session_id, TaskState.SUCCEEDED, {"result": final_text})
+        except (KeyError, ValueError):
+            pass
+    except Exception as e:
+        detail = str(e).strip() or (
+            "问答在 30 秒内未完成，已终止。" if isinstance(e, TimeoutError) else "问答执行失败，未返回可读详情。"
+        )
+        monitor._emit("error", f"[quick_chat] 执行失败：{detail}")
+        try:
+            await task_manager.transition(
+                session_id,
+                TaskState.FAILED,
+                {
+                    "error": {
+                        "code": "CHAT_EXECUTION_FAILED",
+                        "message": detail,
+                        "source": "chat",
+                        "retryable": True,
+                    }
+                },
+            )
+        except (KeyError, ValueError):
+            pass
+    finally:
+        # 注意：quick chat 不设置 session_dir，仅 reset thread 部分（避免给 reset 传 None 报错）
+        from api.context import _thread_id_ctx  # noqa: PLC2701 internal cleanup
+        try:
+            _thread_id_ctx.reset(thread_token)
+        except (ValueError, LookupError):
+            pass
+
+
+_CLARIFY_SYSTEM_PROMPT = (
+    "你是研究问题的澄清助手。判断用户的问题是否缺少关键要素（例如：对比的对象、研究的时间范围、"
+    "地域、目标人群、评估指标、需要用到的资料范围等）。\n"
+    "输出规则：\n"
+    "1. 如果信息充足，直接输出空数组：[]\n"
+    "2. 如果信息不足，输出最多 3 条、最少 1 条澄清问题，使用严格 JSON 数组，例如："
+    '[\"你想用哪个城市和北京对比？\",\"对比的维度是什么（房价/教育/就业/生活成本）？\"]\n'
+    "3. 只输出 JSON，不要输出额外解释、代码块、前后缀或自然语言。\n"
+    "4. 问题要具体、可直接由用户一句话回答；不要重复用户已经明确给出的信息。"
+)
+
+# 从模型文本输出里稳妥地截出第一个 JSON 数组（兼容前后垃圾文本、``` 代码块等）
+_JSON_ARRAY_RE = re.compile(r"\[[\s\S]*\]")
+
+
+async def ask_clarifying_questions(task_query: str, task_mode: str) -> list[str]:
+    """基于用户问题判断是否信息不足，返回需要用户补充的澄清问题。空数组表示"信息已充足，可直接执行"。
+
+    不修改 task_manager 状态、不走 WebSocket，作为研究/聊天链路的前置探针接口。
+    """
+    prompt = f"用户选择的模式：{task_mode}\n用户问题：{task_query}"
+    try:
+        response = await get_model().ainvoke(
+            [SystemMessage(content=_CLARIFY_SYSTEM_PROMPT), HumanMessage(content=prompt)],
+            config={"max_tokens": 512},
+        )
+    except Exception as exc:  # noqa: BLE001
+        # 任何 LLM 认证/网络问题都降级为「信息已充足」，不阻断用户继续。
+        print(f"[clarify] LLM call failed, treating as sufficient: {exc}")
+        return []
+
+    raw = (response.content if isinstance(response.content, str) else "").strip()
+    if not raw:
+        return []
+
+    # 优先尝试直接 JSON.parse
+    try:
+        parsed = json.loads(raw)
+        if isinstance(parsed, list):
+            return [str(q).strip() for q in parsed if str(q).strip()][:3]
+    except json.JSONDecodeError:
+        pass
+
+    # 去掉 ```json / ``` 包裹
+    stripped = re.sub(r"^```(?:json)?\s*", "", raw, flags=re.IGNORECASE)
+    stripped = re.sub(r"\s*```$", "", stripped)
+    try:
+        parsed = json.loads(stripped)
+        if isinstance(parsed, list):
+            return [str(q).strip() for q in parsed if str(q).strip()][:3]
+    except json.JSONDecodeError:
+        pass
+
+    # 最后兜底：正则抓第一个 [ ... ] 段
+    match = _JSON_ARRAY_RE.search(stripped)
+    if match:
+        try:
+            parsed = json.loads(match.group(0))
+            if isinstance(parsed, list):
+                return [str(q).strip() for q in parsed if str(q).strip()][:3]
+        except json.JSONDecodeError:
+            pass
+    return []
 

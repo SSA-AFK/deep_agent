@@ -15,7 +15,10 @@ vi.mock("./api/client", () => ({ api: {
 
 test("renders product name and submits a research question", async () => {
   render(<App />);
-  expect(screen.getByText("Deep Search Pro")).toBeInTheDocument();
+  // 侧边栏 brand 与 顶部 tab 都包含品牌名，取侧边栏的品牌节点做校验
+  const brandMatches = screen.getAllByText("Deep Search Pro");
+  expect(brandMatches.length).toBeGreaterThanOrEqual(1);
+  expect(brandMatches[0]).toBeInTheDocument();
   expect(screen.getByText("服务状态")).toBeInTheDocument();
   expect(screen.getByText("添加附件")).toBeInTheDocument();
   fireEvent.change(screen.getByLabelText("研究问题"), { target: { value: "测试研究" } });

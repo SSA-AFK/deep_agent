@@ -14,6 +14,7 @@ from langchain_core.runnables import RunnableConfig
 from api.errors import PublicError
 from api.monitor import monitor
 from api.settings import get_settings
+from api.context import get_thread_context
 from tools.contracts import DataMode, SourceItem, ToolResult, ToolStatus
 from tools.demo_sources import load_search_results
 
@@ -113,13 +114,29 @@ def _duration_ms(started: float) -> int:
 @tool
 def internet_search(query: str, max_results: int = 10, config: RunnableConfig | None = None) -> str:
     """Search public information through Zhihu global search."""
+    thread_id = get_thread_context() or (config or {}).get("configurable", {}).get("thread_id")
     monitor.report_tool("知乎全网搜索", {"query": query, "max_results": max_results})
+
+    # 单任务单次检索护栏：同一线程只放行一次真实检索，后续调用返回提示，
+    # 促使模型基于已有结果立即汇总，避免重复检索拖慢整体完成时间。
+    if thread_id and not monitor.mark_searched(thread_id):
+        return ToolResult(
+            status=ToolStatus.SUCCESS,
+            source="zhihu_global_search",
+            mode=DataMode.LIVE,
+            duration_ms=0,
+            items=[],
+            metadata={
+                "already_searched": True,
+                "message": "本任务已完成公开检索，请直接基于已有搜索结果汇总最终答案，不要重复调用搜索工具。",
+            },
+        ).model_dump_json()
+
     settings = get_settings()
     result = ZhihuSearchClient(
         settings.zhihu_access_secret,
         timeout_seconds=settings.request_timeout_seconds,
     ).search(query, count=max_results)
     if result.status is ToolStatus.SUCCESS:
-        thread_id = (config or {}).get("configurable", {}).get("thread_id")
         monitor.record_source_urls([item.url for item in result.items if item.url], thread_id=thread_id)
     return result.model_dump_json()

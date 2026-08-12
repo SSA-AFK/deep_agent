@@ -34,6 +34,7 @@ class ToolMonitor:
             cls._instance = super(ToolMonitor, cls).__new__(cls)
             cls._instance.websocket_manager = None  # 预留给 FastAPI WebSocketManager
             cls._instance.source_urls = {}
+            cls._instance.searched_threads: set[str] = set()
         return cls._instance
 
     def set_websocket_manager(self, manager):
@@ -79,10 +80,12 @@ class ToolMonitor:
                             #  如果当前线程和 WebSocket 管理器在同一个循环（比如在 FastAPI 的接口 / 任务中运行）：直接 create_task 效率最高；
                             #  如果在不同循环 / 不同线程（比如同步线程调用）：必须用 asyncio.run_coroutine_threadsafe（线程安全的方式），否则会报错 “协程在错误的循环中运行”。
                             # 如果在不同线程，使用 threadsafe 方法
-                            asyncio.run_coroutine_threadsafe(
-                                self.websocket_manager.send_to_thread(payload, thread_id),
-                                manager_loop
-                            )
+                            coroutine = self.websocket_manager.send_to_thread(payload, thread_id)
+                            try:
+                                asyncio.run_coroutine_threadsafe(coroutine, manager_loop)
+                            except Exception as e:
+                                coroutine.close()
+                                print(f"[Monitor] WebSocket send failed: {e}")
                     else:
                         # 如果没有 thread_id，说明可能是系统级消息，或者未上下文环境
                         pass
@@ -114,6 +117,19 @@ class ToolMonitor:
         """报告任务最终结果"""
         self._emit("task_result", "任务执行完成", {"result": result})
 
+    def report_delta(self, delta: str, partial: str | None = None):
+        """报告 LLM 的增量正文分片，用于前端流式展示。
+
+        - delta：本次新增的文本片段（可以为空字符串，表示仅同步当前累积）
+        - partial：可选，当前累积的完整部分文本，用于前端「收到一个片段就整段覆盖」兜底
+        """
+        if not delta and (partial is None or not partial):
+            return
+        payload: Dict[str, Any] = {"delta": delta}
+        if partial is not None:
+            payload["partial"] = partial
+        self._emit("task_delta", "正文增量更新", payload)
+
     def report_session_dir(self, path: str):
         """报告任务工作目录"""
         self._emit("session_created", f"工作目录已创建: {path}", {"path": path})
@@ -136,8 +152,27 @@ class ToolMonitor:
                     urls.append(url)
         return urls
 
+    def peek_source_urls(self, thread_id: str) -> list[str]:
+        """Return a task's recorded public source URLs without clearing them."""
+        urls: list[str] = []
+        for key in [key for key in self.source_urls if key == thread_id or key.startswith(f"{thread_id}:")]:
+            for url in self.source_urls[key]:
+                if url not in urls:
+                    urls.append(url)
+        return urls
+
     def clear_source_urls(self, thread_id: str):
         self.source_urls.pop(thread_id, None)
+
+    def mark_searched(self, thread_id: str) -> bool:
+        """Mark a thread as already searched. Return True if it was the first search."""
+        if thread_id in self.searched_threads:
+            return False
+        self.searched_threads.add(thread_id)
+        return True
+
+    def clear_search_flag(self, thread_id: str):
+        self.searched_threads.discard(thread_id)
 
 
 # 全局单例实例

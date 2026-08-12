@@ -4,6 +4,7 @@ import pytest
 from tools.contracts import DataMode, ToolStatus
 from tools.zhihu_search_tool import ZHIHU_SEARCH_URL, ZhihuSearchClient
 from tools.zhihu_search_tool import internet_search
+from api.monitor import monitor
 
 
 class StubResponse:
@@ -95,3 +96,32 @@ def test_search_degrades_to_deterministic_demo_data(monkeypatch, response):
     assert result.items
     assert result.error is not None
     assert result.error.code
+
+
+def test_internet_search_guards_single_real_search_per_thread(monkeypatch):
+    """同一线程只放行一次真实检索，后续调用返回汇总提示且不重复请求。"""
+    import json
+    from api import context
+
+    calls = {"n": 0}
+
+    def fake_get(self, *args, **kwargs):
+        calls["n"] += 1
+        return StubResponse(payload={"Code": 0, "Data": [{"Title": "Once", "Url": "https://example.invalid/once"}]})
+
+    monkeypatch.setattr(httpx.Client, "get", fake_get)
+    monkeypatch.setattr("tools.zhihu_search_tool.get_settings", lambda: type("Settings", (), {"zhihu_access_secret": "secret", "request_timeout_seconds": 3})())
+
+    tid = "test-once-guard"
+    monitor.clear_search_flag(tid)
+    token = context.set_thread_context(tid)
+    try:
+        first = json.loads(internet_search.invoke({"query": "q", "max_results": 1}))
+        second = json.loads(internet_search.invoke({"query": "q", "max_results": 1}))
+    finally:
+        context._thread_id_ctx.reset(token)
+
+    assert first["status"] == "success"
+    assert first["items"][0]["title"] == "Once"
+    assert second["metadata"]["already_searched"] is True
+    assert calls["n"] == 1

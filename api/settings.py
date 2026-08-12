@@ -56,10 +56,16 @@ class Settings(BaseSettings):
 
     @property
     def active_api_key(self) -> str | None:
+        # 显式指定 LLM_MODEL 时，跟随 OpenAI 兼容端点（如 DashScope），避免被
+        # 环境中的 DEEPSEEK_API_KEY 截胡，导致模型与端点不匹配。
+        if self.llm_model:
+            return self.openai_api_key or self.deepseek_api_key
         return self.deepseek_api_key or self.openai_api_key
 
     @property
     def active_base_url(self) -> str | None:
+        if self.llm_model:
+            return self.openai_base_url or self.deepseek_base_url
         return self.deepseek_base_url if self.deepseek_api_key else self.openai_base_url
 
     def public_summary(self) -> dict[str, object]:

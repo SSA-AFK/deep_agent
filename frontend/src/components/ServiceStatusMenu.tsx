@@ -14,9 +14,10 @@ export function ServiceStatusMenu() {
   return <details className="service-status">
     <summary><CircleAlert size={15} /> 服务状态</summary>
     <div>
-      {entries.length === 0 ? <p><ServerCrash size={15} /><span>状态暂不可用</span><small>可重试</small></p> : entries.map(([key, service]) => {
+      {entries.length === 0 ? <p><ServerCrash size={15} className="icon-warn" /><span>状态暂不可用</span><small>可重试</small></p> : entries.map(([key, service]) => {
         const available = service.status === "available" || service.status === "configured";
-        return <p key={key}>{available ? <CircleCheck size={15} /> : <ServerCrash size={15} />}<span>{labels[key] ?? key}</span><small>{available ? service.mode : `已降级为 ${service.mode}`}</small></p>;
+        const isNonLive = service.mode !== "live";
+        return <p key={key}>{available ? <CircleCheck size={15} className="icon-ok" /> : <ServerCrash size={15} className={isNonLive ? "icon-warn" : "icon-err"} />}<span>{labels[key] ?? key}</span><small>{available ? service.mode : `已降级为 ${service.mode}`}</small></p>;
       })}
     </div>
   </details>;

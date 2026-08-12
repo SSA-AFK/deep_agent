@@ -20,7 +20,7 @@ project_root = current_dir.parent
 
 # Import agent runner and monitor
 # 注意：agent.main_agent 导入时会初始化 main_agent，这可能需要几秒钟
-from agent.main_agent import run_deep_agent
+from agent.main_agent import run_deep_agent, run_quick_chat, ask_clarifying_questions
 from api.monitor import manager
 from api.health import get_service_registry
 from api.settings import get_settings
@@ -69,6 +69,16 @@ app.add_middleware(
 class TaskRequest(BaseModel):
     query: str
     thread_id: str = None
+
+
+class ChatRequest(BaseModel):
+    query: str
+    thread_id: str = None
+
+
+class ClarifyRequest(BaseModel):
+    query: str
+    mode: str = "research"
 
 
 class FeedbackRequest(BaseModel):
@@ -122,6 +132,45 @@ async def cancel_task(thread_id: str):
         raise HTTPException(status_code=404, detail="Task not found.")
     except ValueError as error:
         raise HTTPException(status_code=409, detail=str(error)) from error
+
+
+@app.post("/api/chat")
+async def run_chat(request: ChatRequest):
+    """Quick Chat 模式：直接走单模型流式回答，不创建研究计划、不调用检索与工具。
+
+    状态机：PLANNING -> RUNNING(后台任务直接进入) -> SUCCEEDED / FAILED。
+    WebSocket 事件和 delta 流式完全复用研究链路同一套通道，前端只需按 mode 区分 UI。
+    """
+    thread_id = request.thread_id or str(uuid.uuid4())
+    try:
+        task = await task_manager.create(thread_id, request.query)
+    except ValueError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+
+    try:
+        task = await task_manager.transition(thread_id, TaskState.RUNNING)
+    except (KeyError, ValueError) as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+
+    _record_product_event("chat_submitted", thread_id)
+    task.background_task = asyncio.create_task(run_quick_chat(request.query, thread_id))
+    return {"status": task.state, "thread_id": thread_id}
+
+
+@app.post("/api/clarify")
+async def clarify_task(request: ClarifyRequest):
+    """判断用户问题是否信息不足，返回需要用户补充的澄清问题列表。
+
+    - 返回 {"questions": []} 表示信息已充足，可直接提交到 /api/task 或 /api/chat。
+    - 返回 {"questions": [q1, q2, q3]}（最多 3 条）时，应由前端展示澄清卡片并收集用户回答。
+    """
+    mode = request.mode.strip() or "research"
+    if mode not in {"quick", "research"}:
+        mode = "research"
+    if not request.query.strip():
+        return {"questions": []}
+    questions = await ask_clarifying_questions(request.query.strip(), mode)
+    return {"questions": questions}
 
 
 @app.post("/api/tasks/{thread_id}/feedback")

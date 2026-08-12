@@ -22,8 +22,18 @@ def _build_model(settings: Settings):
     if not settings.model_configured:
         raise RuntimeError("LLM is not configured")
     options = {}
-    if settings.deepseek_api_key:
-        # DeepSeek V4 Flash cannot combine thinking mode with forced tool choice.
+    # Only disable thinking mode when the active route is actually DeepSeek.
+    # An explicit LLM_MODEL override (e.g. qwen3.8-max via DashScope) must not
+    # inherit DeepSeek-specific request shapes just because DEEPSEEK_API_KEY is
+    # also present in the environment.
+    using_deepseek_route = (
+        settings.deepseek_api_key
+        and not settings.llm_model
+        and settings.active_model == settings.deepseek_model
+        and settings.active_base_url == settings.deepseek_base_url
+        and settings.active_api_key == settings.deepseek_api_key
+    )
+    if using_deepseek_route:
         options["extra_body"] = {"thinking": {"type": "disabled"}}
     return init_chat_model(
         model=settings.active_model,
